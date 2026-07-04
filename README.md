@@ -1,36 +1,78 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# TriageAI
+
+**AI-Powered Customer Support Assistant**
+
+Built for the AMD Developer Hackathon (*ACT II — Unicorn Track*).
+
+TriageAI reads incoming support emails, auto-responds to routine questions, and escalates complex issues to your human team — with full transparency into every decision.
+
+## How It Works
+
+1. **Connect your inbox** — Link Gmail or Outlook in one click
+2. **AI classifies & drafts** — Every email is analyzed by type and urgency; a reply is drafted using your tone and rules
+3. **You review & approve** — See every decision with confidence scores and reasoning; edit, approve, or escalate
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Framework | [Next.js 16](https://nextjs.org) (App Router) |
+| Backend + DB | [Convex](https://convex.dev) (reactive, realtime) |
+| AI Model | [Fireworks AI](https://fireworks.ai) (Llama 3 70B) |
+| Embeddings | AMD ROCm via [AMD Developer Cloud](https://amd.com) |
+| Auth | Convex Auth |
+| UI | Tailwind CSS v4 + [shadcn/ui](https://ui.shadcn.com) |
+| Analytics | PostHog |
+
+## AMD ROCm
+
+The embedding generation step runs explicitly on AMD Instinct hardware via the AMD Developer Cloud API. If the AMD endpoint is unavailable, the system falls back gracefully to a local embedding function — never crashing.
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to see the landing page.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Environment Variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Copy `.env.example` and fill in:
 
-## Learn More
+| Variable | Description |
+|----------|-------------|
+| `NEXT_PUBLIC_CONVEX_URL` | Convex deployment URL |
+| `CONVEX_DEPLOYMENT` | Convex deployment name |
+| `FIREWORKS_API_KEY` | Fireworks AI API key |
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
+| `NEXT_PUBLIC_POSTHOG_KEY` | PostHog project key |
+| `NEXT_PUBLIC_POSTHOG_HOST` | PostHog host URL |
+| `AMD_CLOUD_ENDPOINT` | AMD Developer Cloud endpoint |
+| `AMD_CLOUD_API_KEY` | AMD Developer Cloud API key |
 
-To learn more about Next.js, take a look at the following resources:
+## Project Structure
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+├── app/              — Next.js App Router pages
+├── components/       — UI components (landing, layout, theme)
+├── convex/           — Convex backend (schema, queries, mutations, agent)
+├── lib/              — Client libraries (Fireworks, AMD, PostHog, Gmail)
+├── context/          — Project documentation & planning
+└── types/            — Global TypeScript types
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Progress
 
-## Deploy on Vercel
+- [x] Phase 1 — Foundation: Landing page ✅
+- [ ] Phase 1 — Foundation: Auth
+- [ ] Phase 2 — Settings
+- [ ] Phase 3 — Triage Feed
+- [ ] Phase 4 — Decision Details
+- [ ] Phase 5 — Dashboard
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## License
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT
