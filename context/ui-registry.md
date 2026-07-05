@@ -238,3 +238,188 @@ All landing sections follow the same scroll-target layout: section wrapper → m
 - Reusable animation wrapper for scroll-triggered entrance animations
 - Accepts `delay` prop for staggered sequencing
 - All landing sections wrap content in FadeInUp for consistent entrance
+
+---
+
+### Logo — `components/ui/logo.tsx`
+
+| Property | Detail |
+|----------|--------|
+| Usage | `<Logo size={28} className="text-primary" />` |
+| Structure | Mail envelope outline + circle checkmark badge at top-right |
+| Envelope | `rect` with `rx="2.5"`, `stroke="currentColor"`, `strokeWidth="1.5"` |
+| Envelope flap | `path` with V-shape lines |
+| Badge circle | `circle` with `className="fill-primary"`, overlapping envelope top-right |
+| Checkmark | `path` with `stroke="white"`, `strokeWidth="1.5"` |
+| ViewBox | `0 0 28 28` |
+| Default size | `28` |
+
+**Pattern notes:**
+- `currentColor` for envelope lets it inherit parent text color
+- Badge uses `fill-primary` for consistent brand teal
+- Checkmark is always white for contrast against teal circle
+
+---
+
+### Login Page — `app/(auth)/login/page.tsx`
+
+| Property         | Class |
+|-----------------|-------|
+| Page background | `bg-bg-primary` |
+| Gradient top    | `radial-gradient(circle at top right, var(--color-primary-muted), transparent 40%)` |
+| Gradient bottom | `radial-gradient(circle at bottom left, var(--color-primary-light), transparent 30%)` |
+| Card background | `bg-surface` |
+| Card border     | `border border-border` |
+| Card radius     | `rounded-lg` |
+| Card shadow     | `shadow-card` |
+| Card padding    | `p-8` |
+| Heading         | `text-3xl md:text-[32px] font-bold text-text-primary` |
+| Subtitle        | `text-sm text-text-secondary` |
+| Google button   | `bg-surface hover:bg-surface-secondary border border-border rounded-md py-4 px-6 text-sm font-semibold` |
+| Primary button  | `bg-primary hover:bg-primary-dark text-primary-foreground rounded-md py-4 px-6 text-sm font-semibold shadow-sm` |
+| Input           | `bg-surface border border-border rounded-md px-4 py-4 text-sm text-text-primary placeholder:text-text-muted focus:border-secondary focus:ring-1 focus:ring-secondary` |
+| Divider line    | `h-px bg-border` |
+| Divider text    | `text-xs text-text-muted font-medium` |
+| Footer text     | `text-xs text-text-muted` |
+| Footer link     | `text-primary hover:text-primary-dark underline` |
+| AMD badge       | `text-xs font-semibold text-amd` |
+| Loading spinner | `size-5 animate-spin` |
+
+**Pattern notes:**
+- Full-screen centered layout with `min-h-screen flex flex-col items-center justify-center`
+- Radial gradient overlay uses CSS variables; matches onboarding page gradient exactly
+- Google button has 3 states: default (icon + text), loading (spinner + "Connecting..."), disabled
+- `max-w-md` container centers the card, responsive padding on mobile
+- Both buttons disabled when loading with `disabled:opacity-60 disabled:cursor-not-allowed`
+- Auth guard: uses `useConvexAuth` + `getMe` profile query; redirects existing users to `/dashboard`, new users to `/onboarding`
+- Single loading guard `authLoading || isAuthenticated` shows spinner; text toggles "Loading..." / "Redirecting..."
+
+---
+
+### Onboarding Orchestrator — `app/(auth)/onboarding/page.tsx`
+
+| Property | Class |
+|----------|-------|
+| Page background | `bg-bg-primary` |
+| Gradient top | `radial-gradient(circle at top right, var(--color-primary-muted), transparent 40%)` |
+| Gradient bottom | `radial-gradient(circle at bottom left, var(--color-primary-light), transparent 30%)` |
+| Progress bar | `h-1.5 rounded-full bg-border` / `bg-primary` (active) |
+| Progress gap | `gap-1.5` |
+| Step transition | `AnimatePresence mode="wait"` with `opacity 0↔1, y ±16` |
+
+**Pattern notes:**
+- 4-step linear flow: Welcome → Connect Inbox → Business Context → Configuration
+- Step state managed via `useState` with `step` index (0-3)
+- Progress bar is `flex` row of `TOTAL_STEPS` bars, animating `backgroundColor`
+- On completion renders `<CompletedScreen>` instead of steps
+- Completed screen shows success checkmark, summary list (checkmarks), and "Go to Dashboard" CTA
+- Confetti component overlays the completed screen via absolute positioning
+- Radial gradient overlay uses CSS variables; matches login page gradient exactly
+- Both the stepper view and `CompletedScreen` use the same gradient pattern
+
+---
+
+### StepWelcome — `components/onboarding/StepWelcome.tsx`
+
+| Property | Class |
+|----------|-------|
+| Card | `bg-surface border border-border shadow-card rounded-lg p-8` |
+| Icon circle | `size-20 rounded-full bg-primary-muted flex items-center justify-center` |
+| Heading | `text-2xl font-bold text-text-primary text-center` |
+| Subtitle | `text-sm text-text-secondary text-center leading-relaxed` |
+| Step number badge | `size-6 rounded-full bg-primary-muted text-primary text-xs font-semibold` |
+| Step title | `text-sm font-semibold text-text-primary` |
+| Step desc | `text-xs text-text-muted` |
+| CTA button | `bg-primary hover:bg-primary-dark rounded-md py-3.5 px-6 text-sm font-semibold` |
+
+**Pattern notes:**
+- Shows 3-step preview list with staggered entrance animation (`delay: 0.15 + i * 0.08`)
+- Central logo icon in muted primary circle draws attention
+
+---
+
+### StepConnectInbox — `components/onboarding/StepConnectInbox.tsx`
+
+| Property | Class |
+|----------|-------|
+| Provider card | `p-4 rounded-md border flex items-center gap-4` |
+| Connected state | `border-success bg-success-light/20` (with checkmark icon) |
+| Disconnected state | `border-border bg-surface hover:bg-surface-secondary` |
+| Info banner | `bg-success-light/10 border border-success/20 rounded-md p-3` |
+| Back button | `bg-surface hover:bg-surface-secondary border border-border rounded-md py-3.5 px-6 text-sm font-semibold` |
+
+**Pattern notes:**
+- Gmail connect is a toggle — clicking simulates connection (shows checkmark + info banner)
+- "Skip for now" text on continue when not connected
+- Back/Continue button row uses `flex-[2]` for continue and `flex-1` for back
+
+---
+
+### StepBusinessContext — `components/onboarding/StepBusinessContext.tsx`
+
+| Property | Class |
+|----------|-------|
+| Input wrapper | `relative` with icon absolutely positioned `left-3.5 top-1/2 -translate-y-1/2` |
+| Input | `w-full bg-surface border border-border rounded-md pl-10 pr-4 py-3.5 text-sm` |
+| Textarea | `w-full bg-surface border border-border rounded-md px-4 py-3.5 text-sm resize-none` |
+| Input focus | `focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all` |
+| Label | `text-sm font-semibold text-text-primary mb-1.5` |
+| Hint | `text-xs text-text-muted mt-1.5` |
+
+**Pattern notes:**
+- URL field has globe icon inside input at left
+- Textarea has 4 rows with placeholder encouraging detail
+- Same Back/Continue button pattern as StepConnectInbox
+
+---
+
+### StepConfiguration — `components/onboarding/StepConfiguration.tsx`
+
+| Property | Class |
+|----------|-------|
+| Section label | `text-xs font-semibold text-text-muted uppercase tracking-wider mb-3` |
+| Toggle switch | `h-5 w-9 rounded-full border-2 transition-colors`, active: `bg-primary`, inactive: `bg-surface-tertiary` |
+| Toggle knob | `size-4 rounded-full bg-white shadow-sm`, active: `translate-x-4`, inactive: `translate-x-0` |
+| Tone button (selected) | `border-primary bg-primary-muted text-primary-dark` |
+| Tone button (default) | `border-border bg-surface hover:bg-surface-secondary text-text-secondary` |
+| Tone grid | `grid grid-cols-3 gap-2` |
+
+**Pattern notes:**
+- Rules section uses custom `<Toggle>` component with `role="switch"` and `aria-checked`
+- Tone selector uses 3-column grid of card-style buttons
+- "Complete Setup" button has `buttonShine` effect (gradient sweep overlay via `group-hover:translate-x-full`)
+
+---
+
+### Confetti — `components/onboarding/Confetti.tsx`
+
+| Property | Detail |
+|----------|--------|
+| Position | `absolute inset-0 pointer-events-none z-0 overflow-hidden` |
+| Particles | 24 animated divs using Framer Motion |
+| Colors | Primary, secondary, success, warning, error (CSS vars) |
+| Shapes | Circles and squares alternating |
+| Animation | `confettiParticle` variant: burst outward from center + fade + rotate |
+
+**Pattern notes:**
+- Uses `confettiParticle` custom variant with `i` index to calculate angle in 12-point circle
+- Particle size ranges 6-12px based on `6 + (i % 4) * 2`
+- Each particle has randomized delay via `i * 0.04`
+
+---
+
+### Dashboard Page — `app/dashboard/page.tsx`
+
+| Property | Class |
+|----------|-------|
+| Page background | `bg-bg-primary` |
+| Icon circle | `size-16 rounded-full bg-primary/10 flex items-center justify-center` |
+| Icon | `size-8 text-primary` |
+| Heading | `text-2xl font-bold text-text-primary` |
+| Subtitle | `text-sm text-text-secondary` |
+| Loading spinner | `size-5 animate-spin` |
+
+**Pattern notes:**
+- Uses `useConvexAuth` + `getMe` profile query for auth and new-user guards
+- Auth redirect: unauthenticated → `/login`, new user → `/onboarding`
+- Single loading guard covers all non-dashboard states (loading auth, loading profile, not authenticated, new user)

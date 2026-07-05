@@ -456,6 +456,8 @@ Approved dependencies for this project:
 - `posthog-node` — PostHog server client
 - `@react-pdf/renderer` — Weekly report PDF generation
 - `lucide-react` — Icons
+- `@mozilla/readability` — HTML content extraction (strip navs, ads, footers)
+- `linkedom` — Lightweight HTML parsing for page discovery
 - `tailwindcss` — Styling
 - `shadcn/ui` components — UI primitives
 - `zod` — Schema validation (optional)

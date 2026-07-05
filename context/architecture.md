@@ -44,11 +44,14 @@
 │   ├── dashboard/
 │   │   └── page.tsx                       → Main dashboard with live stats
 │   ├── settings/
-│   │   └── page.tsx                       → Inbox connection + rules setup
-│   └── decisions/
-│       ├── page.tsx                       → Live triage feed
-│       └── [id]/
-│           └── page.tsx                   → Individual decision details
+│   │   └── page.tsx                       → Inbox connection + rules + business context
+│   ├── decisions/
+│   │   ├── page.tsx                       → Live triage feed
+│   │   └── [id]/
+│   │       └── page.tsx                   → Individual decision details
+│   └── api/
+│       └── scrape-summarize/
+│           └── route.ts                   → Fetch URL + strip + Fireworks summarize
 ├── convex/
 │   ├── schema.ts                          → Convex database schema
 │   ├── auth.ts                            → Convex Auth configuration
@@ -64,6 +67,7 @@
 ├── lib/
 │   ├── convex-client.ts                   → Convex client configuration
 │   ├── fireworks.ts                       → Fireworks AI API client
+│   ├── scraper.ts                         → URL page discovery + Readability extraction
 │   ├── gmail.ts                           → Gmail API client
 │   ├── amd-cloud.ts                       → AMD Developer Cloud API client
 │   ├── posthog-client.ts                  → PostHog browser client
@@ -84,6 +88,7 @@
 │   │   └── AnalyticsCharts.tsx
 │   ├── settings/
 │   │   ├── InboxConnection.tsx
+│   │   ├── BusinessContext.tsx
 │   │   ├── EscalationRules.tsx
 │   │   └── ReplyToneSelector.tsx
 │   ├── triage/
@@ -170,14 +175,15 @@ Context added to Fireworks AI prompt
 
 ### `users`
 
-| Column        | Type     | Notes                                    |
-| ------------- | -------- | ---------------------------------------- |
-| _id           | Id       | Auto-generated                           |
-| business_name | string   |                                          |
-| email         | string   | Primary contact email                    |
-| plan          | string   | free / pro                               |
-| created_at    | datetime |                                          |
-| updated_at    | datetime |                                          |
+| Column           | Type     | Notes                                               |
+| ---------------- | -------- | --------------------------------------------------- |
+| _id              | Id       | Auto-generated                                      |
+| business_name    | string   |                                                     |
+| email            | string   | Primary contact email                               |
+| plan             | string   | free / pro                                          |
+| business_context | string?  | AI system context — products, shipping, returns, hours |
+| created_at       | datetime |                                                     |
+| updated_at       | datetime |                                                     |
 
 ### `inboxConnections`
 

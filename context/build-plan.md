@@ -112,6 +112,14 @@ Build the complete settings page UI with mock data. No save logic yet.
   - Connection status indicator (connected/disconnected)
   - Connected email address display (if connected)
   - When mock enabled: shows "Send Test Email" button
+- **Business Context card:**
+  - "Business Context" title + subtitle "Help the AI understand your business so it drafts accurate, policy-aware replies"
+  - Website URL input + "Auto-fill from Website" button (calls `/api/scrape-summarize`)
+  - Auto-fill loading state: "Analyzing your website..." with spinner
+  - Large textarea pre-filled with auto-fill result (owner reviews + edits)
+  - Textarea placeholder: "Describe what your business sells, your shipping/return policy, support hours, and any other details the AI should know..."
+  - "Save Context" button
+  - Auto-fill failure: textarea stays empty, no error state — owner just types
 - **Escalation Rules card:**
   - "When to escalate" section with explanation
   - Rule list with add/remove functionality:
@@ -125,6 +133,37 @@ Build the complete settings page UI with mock data. No save logic yet.
   - Tone selector: Professional / Friendly / Casual / Enthusiastic
   - Preview of sample reply in selected tone
 - **Save Settings button** at bottom
+
+**Backend:**
+
+- `app/api/scrape-summarize/route.ts` — POST endpoint: fetch URL + discover linked pages (`/about`, `/faq`, `/shipping`, `/returns`, `/terms`, `/pricing`, `/contact`) → strip via Readability → summarize via Fireworks → return `{ summary: string }`
+- `lib/scraper.ts` — page discovery, parallel fetch with 4s per-page timeout, content extraction
+- `@mozilla/readability` + `linkedom` — HTML parsing and content extraction
+- `convex/users.ts` — `saveBusinessContext` mutation stores `business_context` on user record
+- `convex/schema.ts` — `business_context: v.optional(v.string())` on `users` table
+- Agent: both `classifyEmail.ts` and `draftReply.ts` prepend business context as system prompt prefix
+
+---
+
+### 05.5 Business Context Logic
+
+Wire the auto-fill and save logic for business context.
+
+**UI:**
+- URL input + "Auto-fill from Website" button
+- Textarea with auto-fill result (editable)
+- Loading state during auto-fill
+- Save button saves to Convex
+
+**Logic:**
+- "Auto-fill from Website" → POST `/api/scrape-summarize` with URL
+- API route: `fetch()` main URL → `linkedom` parse + discover linked pages → `Promise.allSettled` fetch all (4s per-page timeout) → `@mozilla/readability` strip each → Fireworks summarize into structured text → return summary
+- On success: pre-fill textarea with summary
+- On failure: textarea stays empty — owner types manually
+- Save: Convex mutation `saveBusinessContext` writes to `users.business_context`
+- Agent injection: both `classifyEmail()` and `draftReply()` query `business_context` and prepend it as system prompt prefix
+
+**PostHog events:** `business_context_saved`, `business_context_autofilled`
 
 ---
 

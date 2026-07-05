@@ -1,5 +1,6 @@
 "use client";
 
+import posthog from "posthog-js";
 import { motion } from "motion/react";
 import { FadeInUp } from "./FadeInUp";
 import { staggerContainer, staggerItem } from "@/lib/variants";
@@ -105,7 +106,16 @@ export function Pricing() {
                   </li>
                 ))}
               </ul>
-              <Link href="/login">
+              <Link
+                href="/login"
+                onClick={() =>
+                  posthog.capture("pricing_cta_clicked", {
+                    plan: plan.name.toLowerCase(),
+                    cta: plan.cta,
+                    featured: plan.featured,
+                  })
+                }
+              >
                 <Button
                   variant={plan.featured ? "default" : "outline"}
                   className="w-full"

@@ -7,8 +7,8 @@ Update this file after every completed feature. Any AI agent reading this should
 ## Current Status
 
 **Phase:** 1 — Foundation (In Progress)
-**Last completed:** 01 Landing Page
-**Next:** 02 Auth
+**Last completed:** 03 PostHog Initialization
+**Next:** 04 Convex Database Schema
 
 ---
 
@@ -17,13 +17,14 @@ Update this file after every completed feature. Any AI agent reading this should
 ### Phase 1 — Foundation
 
 - [x] 01 Landing Page
-- [ ] 02 Auth
-- [ ] 03 PostHog Initialization
+- [x] 02 Auth — Full (Google OAuth, Convex Auth, Callback, Proxy)
+- [x] 03 PostHog Initialization
 - [ ] 04 Convex Database Schema
 
 ### Phase 2 — Settings Page
 
 - [ ] 05 Settings Page — Full UI
+- [ ] 05.5 Business Context — Auto-fill + Save + Agent Injection
 - [ ] 06 Inbox Connection Logic
 - [ ] 07 Escalation Rules Logic
 - [ ] 08 Reply Tone Logic
@@ -56,24 +57,27 @@ Update this file after every completed feature. Any AI agent reading this should
 
 | Phase                 | Features | Completed |
 | --------------------- | -------- | --------- |
-| Phase 1 — Foundation  | 4        | 1         |
-| Phase 2 — Settings    | 4        | 0         |
+| Phase 1 — Foundation  | 4        | 3         |
+| Phase 2 — Settings    | 5        | 0         |
 | Phase 3 — Triage Feed | 6        | 0         |
 | Phase 4 — Details     | 3        | 0         |
 | Phase 5 — Dashboard   | 4        | 0         |
-| **Total**             | **21**   | **1**     |
+| **Total**             | **22**   | **3**     |
 
 ---
 
 ## Decisions Made During Build
 
-*This section will be updated as decisions are made during development.*
+- **PostHog `api_host` uses local `/ingest` proxy** — Next.js rewrites in `next.config.ts` proxy `/ingest/:path*` → PostHog EU servers. Avoids CORS issues and ad-blocker detection. Requires `/ingest(.*)` in `proxy.ts` `isPublicPage` to bypass auth middleware.
+- **`posthog.init()` lives in `PostHogProvider` only** — module-level `useEffect` with `__loaded` guard prevents double init. `lib/posthog-client.ts` is a pure re-export of the singleton.
+- **`getPostHogServerClient()` uses singleton** — lazy-initialized, returns `null` if PostHog key is missing (no crash).
+- **Auth watcher pattern** over inline identify/reset calls — auto-handles all auth transitions globally.
 
 ---
 
 ## Known Issues
 
-*This section will be updated as issues are discovered.*
+- (none)
 
 ---
 
@@ -94,17 +98,17 @@ Update this file after every completed feature. Any AI agent reading this should
 
 ## Notes
 
-*Add notes here as the build progresses — workarounds, patterns, anything that differs from the context files.*
+_Add notes here as the build progresses — workarounds, patterns, anything that differs from the context files._
 
 ---
 
 ## Timeline
 
-| Date | Milestone |
-|------|-----------|
-| July 2 | Register for hackathon, apply for Fireworks credits |
-| July 6-11 | Hackathon event |
-| July 11 | Submission deadline |
+| Date      | Milestone                                           |
+| --------- | --------------------------------------------------- |
+| July 2    | Register for hackathon, apply for Fireworks credits |
+| July 6-11 | Hackathon event                                     |
+| July 11   | Submission deadline                                 |
 
 ---
 

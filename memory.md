@@ -1,40 +1,45 @@
-# Memory — Landing Page + Review Fixes
+# Memory — PostHog Initialization (Feature 03)
 
-Last updated: 2026-07-04
+Last updated: 2026-07-05
 
 ## What was built
 
-- **Full landing page** — Hero (with Spotlight + live triage feed), Features (3 cards), How It Works (3 steps), Pricing (3 plans with featured), Powered By (InfiniteMovingCards with AMD/Fireworks/Convex logos), Contact (3 cards), Footer, Navbar, ThemeProvider/ThemeToggle
-- **Aceternity UI components** — `Spotlight`, `MovingBorder`, `InfiniteMovingCards`
-- **Theme system** — light/dark/system with localStorage persistence and system preference detection
-- **File structure:** `components/landing/`, `components/theme/`, `components/layout/Navbar.tsx`
+- **`lib/posthog-client.ts`** — pure re-export of `posthog-js` singleton (no init)
+- **`lib/posthog-server.ts`** — lazy singleton for `posthog-node`, env var fallback, returns `null` if key missing
+- **`components/PostHogProvider.tsx`** — single source of `posthog.init()` in a `useEffect` with `__loaded` guard, `debug` scoped to dev, `api_host: "/ingest"` for local proxy
+- **`components/PostHogAuthWatcher.tsx`** — auto identify/reset on auth changes, try/catch wrapped
+- **`app/layout.tsx`** — provider order: `PostHogProvider > ConvexClientProvider > ThemeProvider`
+- **`proxy.ts`** — added `/ingest(.*)` to `isPublicPage` so PostHog's API requests bypass auth middleware
+- **`opencode.json`** — PostHog MCP server at `https://mcp.posthog.com/mcp`
+- **`components/layout/Navbar.tsx`** — "Sign Out" button (calls `signOut()`) shown when authenticated
 
 ## Decisions made
 
-- Spotlight uses `fillOpacity={0.35}` with teal `#2bb1a4` for the glow animation
-- Moving border CTA button uses primary (teal) → secondary (indigo) conic gradient
-- All landing CTAs link to `/login` (auth pages not built yet)
-- Theme uses `.dark` class on `<html>` with CSS variables — matching ui-tokens.md
-- Section heading pattern: `text-lg font-semibold text-text-primary` (not the hero/page title size)
-- FadeInUp uses 300ms duration to match ui-rules animation guidelines
+- **PostHog `api_host` uses local `/ingest` proxy** from `next.config.ts` rewrites. Avoids CORS and ad-blockers.
+- **`posthog.init()` lives in `PostHogProvider` only** — module-level `useEffect` prevents double init.
+- **Auth watcher** over inline calls — auto-handles all auth transitions globally.
+- **`getPostHogServerClient()`** is a lazy singleton returning `null` if key missing.
 
 ## Problems solved
 
-- **Spotlight invisible** — was behind page background due to `-z-10` on container div; removed it
-- **Navbar hover broken** — `hover:bg-bg-secondary` referenced a non-existent token; fixed to `hover:bg-surface-secondary`
+- **Env var name mismatch** — `.env.local` uses `NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN` but code read `NEXT_PUBLIC_POSTHOG_KEY`. Fixed with `??` fallback in all files.
+- **Proxy middleware intercepting PostHog requests** — `/ingest(.*)` added to `isPublicPage` in `proxy.ts` so PostHog API calls aren't redirected to login.
+- **Rate limiter HTML/JSON parse error** — was caused by requests hitting Next.js server (via proxy redirect or direct URL) instead of PostHog's API. Fixed by using `/ingest` proxy path.
+- **Review issues** — duplicate `posthog.init()`, missing env fallback in server client, missing try/catch, `debug: true` always on. All fixed.
 
 ## Current state
 
-- Landing page complete — all sections render, responsive, dark/light mode working
-- Build passes clean (`npm run build` succeeds)
-- ui-registry.md populated with patterns from all 9+ landing components
-- Progress tracker updated: Phase 1 Feature 01 done
+- Feature 03 complete, all review issues resolved
+- PostHog browser client initialized at `/ingest` proxy path
+- Server client lazy singleton with null-safe return
+- Auth watcher fires `identify()` + `capture("login")` on auth, `reset()` on de-auth
+- TypeScript passes clean
+- Progress tracker updated (3/22 complete)
 
 ## Next session starts with
 
-- **Phase 1 Feature 02 — Auth** (Convex Auth + login page + callback page)
-- `/remember restore` to pick up from here
+- Feature 04 — Convex Database Schema. Create all Convex tables (`userProfiles`, `inboxConnections`, `emails`, `triageDecisions`, `escalations`, `customerEmbeddings`) with indexes and auth rules.
 
 ## Open questions
 
-- "View Live Demo" CTA currently goes to `/login` — user chose to revisit for a `/demo` page later
+- (none)

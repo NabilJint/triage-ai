@@ -1,5 +1,6 @@
 "use client";
 
+import posthog from "posthog-js";
 import { Spotlight } from "@/components/ui/spotlight";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -48,6 +49,7 @@ export function Hero() {
                   className="px-6 py-3 text-base font-medium"
                   as="a"
                   href="/login"
+                  onClick={() => posthog.capture("hero_cta_clicked", { label: "get_started_free" })}
                 >
                   Get Started Free
                 </MovingBorderBtn>
@@ -57,7 +59,7 @@ export function Hero() {
                   className="w-full sm:w-auto"
                   asChild
                 >
-                  <a href="/login">View Live Demo</a>
+                  <a href="/login" onClick={() => posthog.capture("hero_cta_clicked", { label: "view_live_demo" })}>View Live Demo</a>
                 </Button>
               </div>
             </FadeInUp>

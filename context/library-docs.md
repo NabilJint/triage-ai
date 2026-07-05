@@ -741,6 +741,196 @@ import { Switch } from "@/components/ui/switch";
 
 ---
 
+## URL Scraping — Business Context Auto-Fill
+
+**Check first:** Check AGENTS.md for an installed URL scraping skill.
+
+### Dependencies
+
+```
+npm install @mozilla/readability linkedom
+```
+
+These must be added to `code-standards.md` approved list before installing.
+
+### Pattern
+
+The auto-fill flow runs in a Next.js API route (`POST /api/scrape-summarize`):
+
+```
+Client sends { url } → API route
+         ↓
+1. fetch(url) → linkedom parse → discover linked pages
+   (/about, /faq, /shipping, /returns, /terms, /pricing, /contact)
+         ↓
+2. Promise.allSettled(fetch all discovered pages, 4s per-page timeout)
+   → some may fail, that's fine
+         ↓
+3. @mozilla/readability strips each to main text content
+         ↓
+4. Concatenate all text → Fireworks AI summarizes into structured format
+         ↓
+5. Return { summary: string } to client
+         ↓
+Client pre-fills textarea → owner reviews + edits → save to Convex
+```
+
+### Scraper Utility (`lib/scraper.ts`)
+
+```typescript
+// lib/scraper.ts
+import { Readability } from "@mozilla/readability";
+import { parseHTML } from "linkedom";
+
+const DISCOVERY_KEYWORDS = [
+  "about", "faq", "shipping", "return", "term",
+  "pricing", "contact", "policy",
+];
+
+export function discoverLinkedPages(baseUrl: string, html: string): string[] {
+  const { document } = parseHTML(html);
+  const links = new Set<string>();
+  const base = new URL(baseUrl);
+
+  for (const anchor of document.querySelectorAll("a[href]")) {
+    try {
+      const href = anchor.getAttribute("href")!;
+      const url = new URL(href, baseUrl);
+      if (url.hostname !== base.hostname) continue;
+      const path = url.pathname.toLowerCase();
+      if (DISCOVERY_KEYWORDS.some((kw) => path.includes(kw))) {
+        links.add(url.toString());
+      }
+    } catch {
+      // Skip invalid URLs
+    }
+  }
+
+  return Array.from(links).slice(0, 5);
+}
+
+export async function fetchPage(url: string, timeoutMs = 4000): Promise<string | null> {
+  try {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeoutMs);
+    const response = await fetch(url, {
+      signal: controller.signal,
+      headers: { "User-Agent": "TriageAI/1.0 (context-fetcher)" },
+    });
+    clearTimeout(id);
+    if (!response.ok) return null;
+    return await response.text();
+  } catch {
+    return null;
+  }
+}
+
+export function extractContent(html: string): string | null {
+  try {
+    const { document } = parseHTML(html);
+    const reader = new Readability(document.cloneNode(true) as Document);
+    const result = reader.parse();
+    return result?.textContent?.replace(/\s+/g, " ").trim() ?? null;
+  } catch {
+    return null;
+  }
+}
+```
+
+### API Route (`app/api/scrape-summarize/route.ts`)
+
+```typescript
+// app/api/scrape-summarize/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { discoverLinkedPages, fetchPage, extractContent } from "@/lib/scraper";
+import { fireworks } from "@/lib/fireworks";
+
+export async function POST(req: NextRequest) {
+  try {
+    const { url } = await req.json();
+    if (!url || typeof url !== "string") {
+      return NextResponse.json({ error: "URL is required" }, { status: 400 });
+    }
+
+    const mainHtml = await fetchPage(url);
+    if (!mainHtml) {
+      return NextResponse.json({ summary: "" });
+    }
+
+    const linkedUrls = discoverLinkedPages(url, mainHtml);
+
+    const results = await Promise.allSettled(
+      linkedUrls.map((u) => fetchPage(u))
+    );
+
+    const allHtml = [mainHtml, ...results
+      .filter((r) => r.status === "fulfilled" && r.value)
+      .map((r) => (r as PromiseFulfilledResult<string>).value)];
+
+    const texts = allHtml
+      .map((html) => extractContent(html))
+      .filter(Boolean) as string[];
+
+    if (texts.length === 0) {
+      return NextResponse.json({ summary: "" });
+    }
+
+    const merged = texts.join("\n\n---\n\n").slice(0, 15000);
+    const prompt = `Summarize this business information into a concise reference for an AI customer support agent.
+
+Include:
+- What the business sells or does
+- Shipping policy
+- Return/refund policy
+- Support hours
+- Contact methods
+- Any other important policies
+
+Business content:
+${merged}
+
+Return a structured summary. If a section has no information, write "Not specified."`;
+
+    const response = await fireworks.invoke(prompt);
+    const summary = typeof response.content === "string"
+      ? response.content
+      : "";
+
+    return NextResponse.json({ summary });
+  } catch (error) {
+    console.error("[scrape-summarize]", error);
+    return NextResponse.json({ summary: "" });
+  }
+}
+```
+
+### Convex Injection (Agent)
+
+```typescript
+// Inside classifyEmail.ts or draftReply.ts
+const user = await ctx.db.get(userId);
+const businessContext = user?.business_context;
+
+const systemPrompt = businessContext
+  ? `You are an AI support agent for the following business:\n\n${businessContext}\n\n---\n\n`
+  : "";
+
+const prompt = `${systemPrompt}Classify this customer support email...`;
+```
+
+### Rules
+
+- API route always returns `{ summary: string }` — never fails, empty string on error
+- Per-page timeout: 4s — slow pages are skipped silently
+- Max 5 linked pages discovered — prevents runaway requests
+- Content truncated to 15,000 chars before Fireworks call (token limit safety)
+- `@mozilla/readability` strips nav, footer, ads, boilerplate — only main content
+- `linkedom` is used instead of JSDOM (smaller, faster, no native deps)
+- Summary is pre-filled into textarea for owner review — never saved directly without owner editing
+- Fireworks temperature: 0.3 (deterministic summarization)
+
+---
+
 ## Docker
 
 **Check first:** Check AGENTS.md for an installed Docker skill.
