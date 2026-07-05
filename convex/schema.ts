@@ -26,6 +26,7 @@ export default defineSchema({
   }).index("by_user", ["user_id"]),
 
   emails: defineTable({
+    user_id: v.id("users"),
     inbox_connection_id: v.id("inboxConnections"),
     from_email: v.string(),
     from_name: v.optional(v.string()),
@@ -37,10 +38,11 @@ export default defineSchema({
     gmail_message_id: v.optional(v.string()),
     thread_id: v.optional(v.string()),
   })
-    .index("by_inbox_connection", ["inbox_connection_id"])
-    .index("by_status", ["status"]),
+    .index("by_user_and_received", ["user_id", "received_at"])
+    .index("by_inbox_connection", ["inbox_connection_id"]),
 
   triageDecisions: defineTable({
+    user_id: v.id("users"),
     email_id: v.id("emails"),
     classification: v.string(),
     confidence: v.float64(),
@@ -51,10 +53,12 @@ export default defineSchema({
     created_at: v.string(),
     processed_at: v.optional(v.string()),
   })
-    .index("by_email", ["email_id"])
-    .index("by_action", ["action"]),
+    .index("by_user", ["user_id"])
+    .index("by_user_and_action", ["user_id", "action"])
+    .index("by_email", ["email_id"]),
 
   escalations: defineTable({
+    user_id: v.id("users"),
     decision_id: v.id("triageDecisions"),
     priority: v.string(),
     status: v.string(),
@@ -64,8 +68,8 @@ export default defineSchema({
     resolution_note: v.optional(v.string()),
     created_at: v.string(),
   })
-    .index("by_decision", ["decision_id"])
-    .index("by_status", ["status"]),
+    .index("by_user_and_status", ["user_id", "status"])
+    .index("by_decision", ["decision_id"]),
 
   customerEmbeddings: defineTable({
     email_address: v.string(),

@@ -7,8 +7,8 @@ Update this file after every completed feature. Any AI agent reading this should
 ## Current Status
 
 **Phase:** 1 — Foundation (In Progress)
-**Last completed:** 03 PostHog Initialization
-**Next:** 04 Convex Database Schema
+**Last completed:** 04 Convex Database Schema
+**Next:** 05 Settings Page — Full UI
 
 ---
 
@@ -19,7 +19,7 @@ Update this file after every completed feature. Any AI agent reading this should
 - [x] 01 Landing Page
 - [x] 02 Auth — Full (Google OAuth, Convex Auth, Callback, Proxy)
 - [x] 03 PostHog Initialization
-- [ ] 04 Convex Database Schema
+- [x] 04 Convex Database Schema
 
 ### Phase 2 — Settings Page
 
@@ -57,12 +57,12 @@ Update this file after every completed feature. Any AI agent reading this should
 
 | Phase                 | Features | Completed |
 | --------------------- | -------- | --------- |
-| Phase 1 — Foundation  | 4        | 3         |
+| Phase 1 — Foundation  | 4        | 4         |
 | Phase 2 — Settings    | 5        | 0         |
 | Phase 3 — Triage Feed | 6        | 0         |
 | Phase 4 — Details     | 3        | 0         |
 | Phase 5 — Dashboard   | 4        | 0         |
-| **Total**             | **22**   | **3**     |
+| **Total**             | **22**   | **4**     |
 
 ---
 
@@ -72,6 +72,7 @@ Update this file after every completed feature. Any AI agent reading this should
 - **`posthog.init()` lives in `PostHogProvider` only** — module-level `useEffect` with `__loaded` guard prevents double init. `lib/posthog-client.ts` is a pure re-export of the singleton.
 - **`getPostHogServerClient()` uses singleton** — lazy-initialized, returns `null` if PostHog key is missing (no crash).
 - **Auth watcher pattern** over inline identify/reset calls — auto-handles all auth transitions globally.
+- **Feature 04 — Schema convention**: `snake_case` for all DB fields (`user_id`, `email_id`). Denormalized `user_id` on `emails`, `triageDecisions`, `escalations` for direct user-scoped queries (Convex can't efficiently join). No `status` on `triageDecisions` — `action` field is sufficient. Replaced `by_user_and_status` index with `by_user_and_action`.
 
 ---
 
