@@ -46,16 +46,28 @@ All landing sections follow the same scroll-target layout: section wrapper → m
 | Border | `border-b border-border` |
 | Height | `h-16` |
 | Scrolled shadow | `shadow-card` |
-| Logo text | `text-primary text-xl font-bold tracking-tight` |
+| Logo text | `text-primary text-xl font-bold tracking-tight flex items-center gap-2` |
 | Nav link (inactive) | `text-text-dark text-sm font-medium` |
 | Nav link (hover) | `hover:text-text-primary transition-colors duration-200` |
+| App nav link (active) | `text-primary text-sm font-medium relative flex items-center gap-1.5` |
+| App nav link (inactive) | `text-text-secondary text-sm font-medium hover:text-text-primary relative flex items-center gap-1.5` |
+| App nav active indicator | `motion.div layoutId="nav-indicator" absolute -bottom-[18px] left-0 right-0 h-0.5 bg-primary` — spring animation (stiffness 380, damping 30) |
+| Mobile app active | `text-primary bg-primary-muted` |
+| Mobile app inactive | `text-text-dark hover:text-text-primary hover:bg-surface-secondary` |
 | Mobile menu button | `p-2 rounded-md hover:bg-surface-secondary` |
+| App actions | User avatar `size-8 rounded-full border-2 border-border` with initials fallback (`bg-primary-muted text-primary text-xs font-semibold`), `SignOutButton` |
+| Landing Sign In | `variant="ghost" size="sm"` |
+| Landing Get Started | primary `size="sm"` |
 
 **Pattern notes:**
+- Accepts `mode="landing" | "app"` prop to switch between landing and authenticated nav
+- Landing links are hash-anchored (`#features`, `#how-it-works`, `#pricing`, `#contact`)
+- App links use `usePathname()` active detection with Framer Motion `layoutId` spring indicator
 - Sticky top navbar (`sticky top-0 z-50`)
 - Uses `max-w-1280px mx-auto px-6` inner container matching section layout
-- Sign In uses `variant="ghost" size="sm"`, Get Started uses primary `size="sm"`
 - Mobile uses Sheet component with 288px width (`w-72`)
+- Nav item icons are `size-4` with `gap-1.5` between icon and label
+- Sign Out uses `SignOutButton` component (`variant="ghost" size="sm"` with LogOut icon)
 
 ---
 
@@ -192,32 +204,6 @@ All landing sections follow the same scroll-target layout: section wrapper → m
 
 ---
 
-### AppNavbar — `components/layout/AppNavbar.tsx`
-
-| Property | Class |
-|----------|-------|
-| Background | `bg-surface/80 backdrop-blur-md` |
-| Border | `border-b border-border` |
-| Height | `h-16` |
-| Scrolled shadow | `shadow-card` |
-| Logo text | `text-primary text-xl font-bold tracking-tight` |
-| Nav link (active) | `text-primary text-sm font-medium` |
-| Nav link (inactive) | `text-text-secondary text-sm font-medium hover:text-text-primary` |
-| Nav active indicator | `motion.div layoutId="nav-indicator" absolute -bottom-[18px] h-0.5 bg-primary` — spring animation (stiffness 380, damping 30) |
-| Mobile active bg | `text-primary bg-primary-muted` |
-| Mobile inactive bg | `hover:bg-surface-secondary` |
-| Mobile menu button | `p-2 rounded-md hover:bg-surface-secondary` |
-
-**Pattern notes:**
-- Sticky top navbar (`sticky top-0 z-50`)
-- Uses `max-w-1280px mx-auto px-6` inner container matching landing layout
-- Active route detected via `usePathname()` from `next/navigation`
-- Active indicator uses Framer Motion `layoutId` for smooth spring transition between tabs
-- Three nav items: Dashboard (`LayoutDashboard`), Triage Feed (`ListTodo`), Settings (`Settings`)
-- Mobile uses Sheet component with 288px width (`w-72`)
-- Nav item icons are `size-4` with `gap-1.5` between icon and label
-- Sign Out uses `variant="ghost" size="sm"`
-
 ### Theme Provider — `components/theme/ThemeProvider.tsx`
 
 | Property | Detail |
@@ -339,7 +325,7 @@ All landing sections follow the same scroll-target layout: section wrapper → m
 - Progress bar is `flex` row of `TOTAL_STEPS` bars, animating `backgroundColor`
 - On completion renders `<CompletedScreen>` instead of steps
 - Completed screen shows success checkmark, summary list (checkmarks), and "Go to Dashboard" CTA
-- Confetti component overlays the completed screen via absolute positioning
+- LogoFormation animation overlays the completed screen via absolute positioning
 - Radial gradient overlay uses CSS variables; matches login page gradient exactly
 - Both the stepper view and `CompletedScreen` use the same gradient pattern
 
@@ -388,7 +374,7 @@ All landing sections follow the same scroll-target layout: section wrapper → m
 | Input wrapper | `relative` with icon absolutely positioned `left-3.5 top-1/2 -translate-y-1/2` |
 | Input | `w-full bg-surface border border-border rounded-md pl-10 pr-4 py-3.5 text-sm` |
 | Textarea | `w-full bg-surface border border-border rounded-md px-4 py-3.5 text-sm resize-none` |
-| Input focus | `focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all` |
+| Input focus | `focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all` |
 | Label | `text-sm font-semibold text-text-primary mb-1.5` |
 | Hint | `text-xs text-text-muted mt-1.5` |
 
@@ -404,8 +390,7 @@ All landing sections follow the same scroll-target layout: section wrapper → m
 | Property | Class |
 |----------|-------|
 | Section label | `text-xs font-semibold text-text-muted uppercase tracking-wider mb-3` |
-| Toggle switch | `h-5 w-9 rounded-full border-2 transition-colors`, active: `bg-primary`, inactive: `bg-surface-tertiary` |
-| Toggle knob | `size-4 rounded-full bg-white shadow-sm`, active: `translate-x-4`, inactive: `translate-x-0` |
+| Toggle switch | `role="switch"` — via `components/ui/toggle.tsx` (active: `bg-primary`, inactive: `bg-surface-tertiary`, knob: `size-4 rounded-full bg-white shadow-sm`) |
 | Tone button (selected) | `border-primary bg-primary-muted text-primary-dark` |
 | Tone button (default) | `border-border bg-surface hover:bg-surface-secondary text-text-secondary` |
 | Tone grid | `grid grid-cols-3 gap-2` |
@@ -414,23 +399,162 @@ All landing sections follow the same scroll-target layout: section wrapper → m
 - Rules section uses custom `<Toggle>` component with `role="switch"` and `aria-checked`
 - Tone selector uses 3-column grid of card-style buttons
 - "Complete Setup" button has `buttonShine` effect (gradient sweep overlay via `group-hover:translate-x-full`)
+---
+
+### BusinessContextForm — `components/business/BusinessContextForm.tsx`
+
+| Property | Class |
+|----------|-------|
+| Container | `space-y-5` |
+| Label | `block text-sm font-medium text-text-secondary mb-1.5` |
+| Input | `w-full bg-surface border border-border rounded-lg pl-10 pr-4 py-2.5 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all` |
+| Input with icon | Same + icon in `absolute left-3 top-1/2 -translate-y-1/2 size-4 text-text-muted pointer-events-none` |
+| URL input error state | `border-error focus:border-error focus:ring-error/20` |
+| Button | shadcn `<Button>` (not raw button) — uses `useWebsiteScraper` internally |
+| Textarea | Same as input + `resize-none`, `rows={6}`, `px-4` (no left icon) |
+| Error text | `text-xs text-error mt-1.5` |
+| Hint text | `text-xs text-text-muted mt-1.5` |
+
+**Pattern notes:**
+- Shared presentational component used by both `settings/BusinessContext.tsx` and `onboarding/StepBusinessContext.tsx`
+- Owns `useWebsiteScraper` internally; parents only manage state and save/next logic
+- Accepts `urlError?: boolean` for URL validation state (used by onboarding's validate-on-next pattern)
+- Uses shadcn `<Button>` for the autofill button — consistent with design system
+- Input focus rings use `primary` (teal) for normal state, `error` for validation errors
 
 ---
 
-### Confetti — `components/onboarding/Confetti.tsx`
+### InboxConnectButton — `components/gmail/InboxConnectButton.tsx`
+
+| Property | Class |
+|----------|-------|
+| Container | `w-full flex items-center gap-4 p-4 rounded-lg border transition-all` |
+| Connected state | `border-success bg-success-light/20` |
+| Disconnected state | `border-border bg-surface hover:bg-surface-secondary` |
+| Google SVG | `size-8 shrink-0` |
+| Title | `text-sm font-semibold text-text-primary` |
+| Subtitle | `text-xs text-text-muted` |
+| Checkmark | `size-5 text-success shrink-0` (shown only when connected) |
+
+**Pattern notes:**
+- Shared presentational component used by both `settings/InboxConnection.tsx` and `onboarding/StepConnectInbox.tsx`
+- PostHog tracking handled by parent (not the button) — parent wraps `onToggle` with capture call
+- No state of its own — pure controlled component via `connected` and `onToggle` props
+
+---
+
+### Toggle — `components/ui/toggle.tsx`
+
+| Property | Class |
+|----------|-------|
+| Container | `relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent` |
+| Active bg | `bg-primary` |
+| Inactive bg | `bg-surface-tertiary` |
+| Focus ring | `focus:outline-none focus:ring-2 focus:ring-primary/20` |
+| Knob | `pointer-events-none inline-block size-4 rounded-full bg-white shadow-sm ring-0` |
+| Knob active | `translate-x-4` |
+| Knob inactive | `translate-x-0` |
+| Transition | `transition-colors duration-200` (container and knob) |
+
+**Pattern notes:**
+- Uses `role="switch"` + `aria-checked` for accessible toggle
+- Accepts `checked` and `onChange` props — pure controlled component
+- Focus ring uses `primary/20` (teal 20% opacity) — matches `--input-focus-ring` token
+- Replaced inline toggle pattern across `StepConfiguration`, `EscalationRules`, `InboxConnection`
+
+---
+
+### Skeleton — `components/ui/skeleton.tsx`
+
+| Property | Class |
+|----------|-------|
+| Base | `animate-pulse rounded-md bg-primary/10` |
+
+**Pattern notes:**
+- Generic skeleton primitive — accepts `className` for size/shape overrides
+- Used by `LoadingScreen` with `variant="skeleton"` for page-level skeleton placeholders
+- Matches shadcn/ui skeleton pattern
+
+---
+
+### LoadingScreen — `components/ui/loading-screen.tsx`
+
+| Property | Class |
+|----------|-------|
+| Page background | `bg-bg-primary` |
+| Spinner variant | `min-h-screen flex items-center justify-center`, text `text-text-secondary text-sm` with `Loader2 size-5 animate-spin` |
+| Skeleton variant | `min-h-screen bg-bg-primary`, inner `max-w-3xl mx-auto px-6 py-10 space-y-6` |
+
+**Pattern notes:**
+- Accepts `variant="spinner" | "skeleton"` prop
+- Skeleton variant renders 4 card-shaped skeleton placeholders matching settings page layout
+- Spinner variant used for auth guard loading, skeleton for data-loading states
+
+---
+
+### SettingsCard — `components/ui/settings-card.tsx`
+
+| Property | Class |
+|----------|-------|
+| Card | `bg-surface border-border shadow-card` (shadcn `Card`) |
+| Inner padding | `p-6` (via `CardContent`) |
+| Heading | `text-lg font-semibold text-text-primary` |
+| Description | `text-sm text-text-secondary mb-6 leading-relaxed` |
+| Header right slot | `shrink-0 ml-4` |
+
+**Pattern notes:**
+- Accepts `title`, `description`, `headerRight`, `children` props
+- Wraps all 4 settings cards (InboxConnection, BusinessContext, EscalationRules, ReplyToneSelector)
+- Saves ~8 lines per card vs. inline Card + CardContent
+
+---
+
+### AuthBackground — `components/ui/auth-background.tsx`
 
 | Property | Detail |
 |----------|--------|
-| Position | `absolute inset-0 pointer-events-none z-0 overflow-hidden` |
-| Particles | 24 animated divs using Framer Motion |
-| Colors | Primary, secondary, success, warning, error (CSS vars) |
-| Shapes | Circles and squares alternating |
-| Animation | `confettiParticle` variant: burst outward from center + fade + rotate |
+| Position | `absolute inset-0 pointer-events-none z-0` |
+| Gradient top | `radial-gradient(circle at top right, var(--color-primary-muted), transparent 40%)` |
+| Gradient bottom | `radial-gradient(circle at bottom left, var(--color-primary-light), transparent 30%)` |
 
 **Pattern notes:**
-- Uses `confettiParticle` custom variant with `i` index to calculate angle in 12-point circle
-- Particle size ranges 6-12px based on `6 + (i % 4) * 2`
-- Each particle has randomized delay via `i * 0.04`
+- Shared radial gradient overlay for login + onboarding pages
+- Replaces previously inline gradient style in both auth pages
+- Uses CSS variables for theme-adaptive colors
+
+---
+
+### SignOutButton — `components/ui/sign-out-button.tsx`
+
+| Property | Class |
+|----------|-------|
+| Button | `variant="ghost" size="sm"` |
+| Icon | `LogOut size-4` |
+
+**Pattern notes:**
+- Wraps `useAuthActions().signOut()` from `@convex-dev/auth/react`
+- Used in both Navbar (landing mode app actions) and mobile menu
+- Single import point for sign-out — keeps sign-out logic in one place
+
+---
+
+### FloatingAppNavbar — `components/layout/FloatingAppNavbar.tsx`
+
+| Property | Class |
+|----------|-------|
+| Position | `fixed top-4 left-1/2 -translate-x-1/2 z-50` |
+| Width | `w-[90%] max-w-5xl` |
+| Background | `bg-surface/90 backdrop-blur-lg` |
+| Border | `border border-border` |
+| Radius | `rounded-full` |
+| Shadow | `shadow-lg` (scrolled: `shadow-xl`) |
+| Height | `h-14` |
+| Inner padding | `px-6` |
+
+**Pattern notes:**
+- Floating pill navbar — uses `useScrollPosition(10)` to detect scrolled state
+- Children slot for nav links/actions (designed to be composed, not hardcoded)
+- Available as alternative navbar style but not wired into any page yet
 
 ---
 
@@ -484,7 +608,7 @@ Last updated: 2026-07-05
 
 **Pattern notes:**
 - All settings cards use the same pattern: `Card` → `CardContent` → heading + description + content
-- Toggle component is reused from `StepConfiguration.tsx` pattern exactly
+- Toggle component is imported from `components/ui/toggle.tsx` — shared `role="switch"` primitive used across settings and onboarding
 - Shadcn `RadioGroup` + `Label` with `peer/sr-only` pattern for card-style tone selector
 - Stitch design inspiration: cards in `bg-[oklch(1_0_0)]` map to `bg-surface`, `rounded-xl` maps to shadcn Card default, `border-border-subtle` maps to `border-border`
 - Input focus uses `ring-primary` (teal) — consistent with primary brand
