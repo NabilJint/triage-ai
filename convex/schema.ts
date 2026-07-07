@@ -9,6 +9,7 @@ export default defineSchema({
     authUserId: v.id("users"),
     email: v.string(),
     business_name: v.string(),
+    business_url: v.optional(v.string()),
     plan: v.string(),
     business_context: v.optional(v.string()),
     created_at: v.string(),

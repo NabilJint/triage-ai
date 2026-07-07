@@ -14,13 +14,19 @@ export const getMe = query({
       .query("userProfiles")
       .withIndex("by_auth_user", (q) => q.eq("authUserId", getUserId(identity) as any))
       .first();
-    return profile;
+    if (!profile) return null;
+    return {
+      ...profile,
+      image: identity.pictureUrl ?? "",
+      name: identity.name ?? profile.email,
+    };
   },
 });
 
 export const updateBusinessContext = mutation({
   args: {
     business_name: v.string(),
+    business_url: v.optional(v.string()),
     business_context: v.optional(v.string()),
   },
   handler: async (ctx, args) => {

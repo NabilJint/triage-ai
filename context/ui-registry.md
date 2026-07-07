@@ -192,6 +192,32 @@ All landing sections follow the same scroll-target layout: section wrapper → m
 
 ---
 
+### AppNavbar — `components/layout/AppNavbar.tsx`
+
+| Property | Class |
+|----------|-------|
+| Background | `bg-surface/80 backdrop-blur-md` |
+| Border | `border-b border-border` |
+| Height | `h-16` |
+| Scrolled shadow | `shadow-card` |
+| Logo text | `text-primary text-xl font-bold tracking-tight` |
+| Nav link (active) | `text-primary text-sm font-medium` |
+| Nav link (inactive) | `text-text-secondary text-sm font-medium hover:text-text-primary` |
+| Nav active indicator | `motion.div layoutId="nav-indicator" absolute -bottom-[18px] h-0.5 bg-primary` — spring animation (stiffness 380, damping 30) |
+| Mobile active bg | `text-primary bg-primary-muted` |
+| Mobile inactive bg | `hover:bg-surface-secondary` |
+| Mobile menu button | `p-2 rounded-md hover:bg-surface-secondary` |
+
+**Pattern notes:**
+- Sticky top navbar (`sticky top-0 z-50`)
+- Uses `max-w-1280px mx-auto px-6` inner container matching landing layout
+- Active route detected via `usePathname()` from `next/navigation`
+- Active indicator uses Framer Motion `layoutId` for smooth spring transition between tabs
+- Three nav items: Dashboard (`LayoutDashboard`), Triage Feed (`ListTodo`), Settings (`Settings`)
+- Mobile uses Sheet component with 288px width (`w-72`)
+- Nav item icons are `size-4` with `gap-1.5` between icon and label
+- Sign Out uses `variant="ghost" size="sm"`
+
 ### Theme Provider — `components/theme/ThemeProvider.tsx`
 
 | Property | Detail |
@@ -423,3 +449,70 @@ All landing sections follow the same scroll-target layout: section wrapper → m
 - Uses `useConvexAuth` + `getMe` profile query for auth and new-user guards
 - Auth redirect: unauthenticated → `/login`, new user → `/onboarding`
 - Single loading guard covers all non-dashboard states (loading auth, loading profile, not authenticated, new user)
+
+---
+
+### Settings Card (generic) — `components/settings/*.tsx`
+
+File: `components/settings/`
+Last updated: 2026-07-05
+
+| Property                 | Class                                                         |
+| ------------------------ | ------------------------------------------------------------- |
+| Card background          | `bg-surface`                                                  |
+| Card border              | `border-border`                                               |
+| Card radius              | `rounded-xl` / `rounded-lg` (shadcn Card sets `rounded-xl`)   |
+| Card shadow              | `shadow-card`                                                 |
+| Card padding             | `p-6`                                                         |
+| Card heading             | `text-lg font-semibold text-text-primary`                     |
+| Card description         | `text-sm text-text-secondary leading-relaxed`                 |
+| Section heading          | `text-lg font-semibold text-text-primary mb-1`                |
+| Subtitle / body          | `text-sm text-text-secondary leading-relaxed mb-6`            |
+| Label                    | `block text-sm font-medium text-text-secondary mb-1.5`        |
+| Input                    | `w-full bg-surface border border-border rounded-lg px-3 py-2.5 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all` |
+| Input with icon          | Same as input + `pl-10` for icon + icon in `absolute left-3 top-1/2 -translate-y-1/2` |
+| Textarea                 | Same as input + `resize-none`                                 |
+| Hint text                | `text-xs text-text-muted mt-1.5`                              |
+| Toggle (switch)          | `role="switch" aria-checked` — `h-5 w-9 rounded-full border-2`, active `bg-primary`, inactive `bg-surface-tertiary`, knob `size-4 rounded-full bg-white shadow-sm` |
+| Toggle knob (active)     | `translate-x-4`                                               |
+| Toggle knob (inactive)   | `translate-x-0`                                               |
+| Info banner              | `bg-success-light/10 border border-success/20 rounded-lg p-3` |
+| Divider                  | `border-t border-border`                                      |
+| Page heading             | `text-3xl font-bold text-text-darkest tracking-tight`         |
+| Page subtitle            | `text-sm text-text-secondary mt-1`                            |
+| Loading spinner          | `size-5 animate-spin`                                         |
+
+**Pattern notes:**
+- All settings cards use the same pattern: `Card` → `CardContent` → heading + description + content
+- Toggle component is reused from `StepConfiguration.tsx` pattern exactly
+- Shadcn `RadioGroup` + `Label` with `peer/sr-only` pattern for card-style tone selector
+- Stitch design inspiration: cards in `bg-[oklch(1_0_0)]` map to `bg-surface`, `rounded-xl` maps to shadcn Card default, `border-border-subtle` maps to `border-border`
+- Input focus uses `ring-primary` (teal) — consistent with primary brand
+- Two-column tone grid: `grid grid-cols-2 gap-2`
+- Rule priority colors use 4px left border (`border-l-4`) with priority-specific colors
+
+**Escalation rule priority colors:**
+| Priority | Classes |
+|----------|---------|
+| Low      | `border-border bg-surface-secondary` |
+| Medium   | `border-secondary/40 bg-secondary-muted` |
+| High     | `border-warning bg-warning-light` |
+| Urgent   | `border-error bg-error-light` |
+
+**Aceternity integrations:**
+- `AnimatedModal` in `BusinessContext.tsx` — Save Context button triggers confirmation modal with spring animation (stiffness 260, damping 15)
+- `FloatingAppNavbar` at `components/layout/FloatingAppNavbar.tsx` — floating pill navbar using Aceternity `FloatingNav`, hides on scroll down, appears on scroll up
+- `AnimatedTooltip` installed but not integrated — avatar-group specific, doesn't match settings form fields
+- `bento-grid-with-skeletons` requires auth (premium block) — skipped
+
+**Animation patterns:**
+- Settings page uses `pageVariants` (stagger children at 0.08s delay) on main container
+- Page header uses `sectionVariants` (fade in + slide up 30px, 0.6s easeOut)
+- Card list uses `staggerContainer` (stagger children at 0.1s, delayChildren 0.1s)
+- Each card wraps in `motion.div` with `staggerItem` (fade + slide up 20px, 0.5s easeOut)
+
+**Tone selector pattern:**
+- Uses shadcn `RadioGroup` with `RadioGroupItem` as `peer sr-only`
+- `Label` styled as card button: `flex flex-col p-3 rounded-lg border cursor-pointer`
+- Selected state: `peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary-muted`
+- Preview panel: `bg-bg-primary rounded-lg border border-border p-4`

@@ -265,7 +265,9 @@ See `context/build-plan.md` for full details.
 |----------|---------|
 | `NEXT_PUBLIC_CONVEX_URL` | lib/convex-client.ts |
 | `CONVEX_DEPLOYMENT` | Convex deployment |
-| `FIREWORKS_API_KEY` | lib/fireworks.ts |
+| `FIREWORKS_API_KEY` | lib/fireworks.ts, lib/llm.ts |
+| `LLM_PROVIDER` | lib/llm.ts — `"fireworks"` (default) or `"gemini"` |
+| `GOOGLE_API_KEY` | lib/llm.ts — used when `LLM_PROVIDER=gemini` |
 | `GOOGLE_CLIENT_ID` | Convex Auth |
 | `GOOGLE_CLIENT_SECRET` | Convex Auth |
 | `NEXT_PUBLIC_POSTHOG_KEY` | lib/posthog-client.ts |

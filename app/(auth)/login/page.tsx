@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import posthog from "posthog-js";
 import { motion } from "motion/react";
-import { useConvexAuth, useQuery } from "convex/react";
+import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Logo } from "@/components/ui/logo";
 import { Button } from "@/components/ui/button";
@@ -12,11 +13,13 @@ import { Separator } from "@/components/ui/separator";
 import { Loader2, ArrowRight } from "lucide-react";
 import { popIn, staggerContainer, staggerItem } from "@/lib/variants";
 import { useAuthActions } from "@convex-dev/auth/react";
+import { useAuthGuard } from "@/lib/hooks/useAuthGuard";
+import { AuthBackground } from "@/components/ui/auth-background";
 import Link from "next/link";
 
 export default function LoginPage() {
-  const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
-  const profile = useQuery(api.userProfiles.getMe);
+  const router = useRouter();
+  const { isAuthenticated, authLoading, profile } = useAuthGuard();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { signIn } = useAuthActions();
@@ -25,9 +28,8 @@ export default function LoginPage() {
     if (authLoading) return;
     if (!isAuthenticated) return;
     if (profile === undefined) return;
-
-    window.location.href = profile?.business_name ? "/dashboard" : "/onboarding";
-  }, [authLoading, isAuthenticated, profile]);
+    router.push(profile?.business_name ? "/dashboard" : "/onboarding");
+  }, [authLoading, isAuthenticated, profile, router]);
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
@@ -58,23 +60,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-bg-primary relative overflow-hidden">
-      <div
-        className="absolute inset-0 pointer-events-none z-0"
-        style={{
-          backgroundImage: `
-            radial-gradient(
-              circle at top right,
-              var(--color-primary-muted),
-              transparent 40%
-            ),
-            radial-gradient(
-              circle at bottom left,
-              var(--color-primary-light),
-              transparent 30%
-            )
-          `,
-        }}
-      />
+      <AuthBackground />
       <motion.div
         className="z-10 w-full max-w-md px-4 md:px-0"
         variants={staggerContainer}

@@ -6,9 +6,9 @@ Update this file after every completed feature. Any AI agent reading this should
 
 ## Current Status
 
-**Phase:** 1 — Foundation (In Progress)
-**Last completed:** 04 Convex Database Schema
-**Next:** 05 Settings Page — Full UI
+**Phase:** 2 — Settings Page (In Progress)
+**Last completed:** 05 Settings Page — Full UI
+**Next:** 05.5 Business Context — Auto-fill + Save + Agent Injection
 
 ---
 
@@ -23,8 +23,8 @@ Update this file after every completed feature. Any AI agent reading this should
 
 ### Phase 2 — Settings Page
 
-- [ ] 05 Settings Page — Full UI
-- [ ] 05.5 Business Context — Auto-fill + Save + Agent Injection
+- [x] 05 Settings Page — Full UI
+- [x] 05.5 Business Context — Auto-fill + Save + Agent Injection
 - [ ] 06 Inbox Connection Logic
 - [ ] 07 Escalation Rules Logic
 - [ ] 08 Reply Tone Logic
@@ -58,11 +58,11 @@ Update this file after every completed feature. Any AI agent reading this should
 | Phase                 | Features | Completed |
 | --------------------- | -------- | --------- |
 | Phase 1 — Foundation  | 4        | 4         |
-| Phase 2 — Settings    | 5        | 0         |
+| Phase 2 — Settings    | 5        | 1         |
 | Phase 3 — Triage Feed | 6        | 0         |
 | Phase 4 — Details     | 3        | 0         |
 | Phase 5 — Dashboard   | 4        | 0         |
-| **Total**             | **22**   | **4**     |
+| **Total**             | **22**   | **5**     |
 
 ---
 

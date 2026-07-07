@@ -2,36 +2,29 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useConvexAuth } from "@convex-dev/auth/react";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
+import { useAuthGuard } from "@/lib/hooks/useAuthGuard";
 
 export default function CallbackPage() {
-  const { isAuthenticated } = useConvexAuth();
   const router = useRouter();
-  const [mounted, setMounted] = useState(false);
+  const { isAuthenticated, authLoading } = useAuthGuard();
   const [timedOut, setTimedOut] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (mounted && isAuthenticated) {
+    if (!authLoading && isAuthenticated) {
       router.replace("/dashboard");
     }
-  }, [mounted, isAuthenticated, router]);
+  }, [authLoading, isAuthenticated, router]);
 
-  // Timeout after 10 seconds of waiting
   useEffect(() => {
     const timeout = setTimeout(() => {
-      if (!isAuthenticated && mounted) {
+      if (!isAuthenticated && !authLoading) {
         setTimedOut(true);
       }
     }, 10000);
-
     return () => clearTimeout(timeout);
-  }, [mounted, isAuthenticated]);
+  }, [authLoading, isAuthenticated]);
 
   if (timedOut) {
     return (

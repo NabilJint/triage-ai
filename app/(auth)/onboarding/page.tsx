@@ -1,22 +1,25 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import posthog from "posthog-js";
 import { AnimatePresence, motion } from "motion/react";
 import { Logo } from "@/components/ui/logo";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowRight, Check, CheckCircle, Loader2 } from "lucide-react";
+import { ArrowRight, Check, CheckCircle } from "lucide-react";
 import { stepTransition, popIn, fadeIn } from "@/lib/variants";
-import { useConvexAuth } from "@convex-dev/auth/react";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { LoadingScreen } from "@/components/ui/loading-screen";
+import { useAuthGuard } from "@/lib/hooks/useAuthGuard";
+import { AuthBackground } from "@/components/ui/auth-background";
 import Link from "next/link";
 import { StepWelcome } from "@/components/onboarding/StepWelcome";
 import { StepConnectInbox } from "@/components/onboarding/StepConnectInbox";
 import { StepBusinessContext } from "@/components/onboarding/StepBusinessContext";
 import { StepConfiguration } from "@/components/onboarding/StepConfiguration";
-import { Confetti } from "@/components/onboarding/Confetti";
+import { LogoFormation } from "@/components/success/LogoFormation";
 
 type Rules = {
   autoRespond: boolean;
@@ -28,6 +31,7 @@ type Rules = {
 type OnboardingData = {
   gmailConnected: boolean;
   businessUrl: string;
+  businessName: string;
   businessDescription: string;
   rules: Rules;
   replyTone: "professional" | "friendly" | "casual";
@@ -38,6 +42,7 @@ const TOTAL_STEPS = 4;
 const defaultData: OnboardingData = {
   gmailConnected: false,
   businessUrl: "",
+  businessName: "",
   businessDescription: "",
   rules: {
     autoRespond: true,
@@ -49,47 +54,31 @@ const defaultData: OnboardingData = {
 };
 
 export default function OnboardingPage() {
+  const router = useRouter();
   const [step, setStep] = useState(0);
   const [completed, setCompleted] = useState(false);
   const [data, setData] = useState<OnboardingData>(defaultData);
-  const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
-  const profile = useQuery(api.userProfiles.getMe);
+  const { profile, isLoading } = useAuthGuard();
+  const updateBusinessContext = useMutation(api.userProfiles.updateBusinessContext);
   const hasStartedRef = useRef(false);
 
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      window.location.href = "/login";
+    if (!profile) return;
+    if (profile.business_name) {
+      router.push("/dashboard");
     }
-  }, [authLoading, isAuthenticated]);
+  }, [profile, router]);
 
   useEffect(() => {
-    if (profile && profile.business_name) {
-      window.location.href = "/dashboard";
-    }
-  }, [profile]);
-
-  useEffect(() => {
-    if (authLoading || !isAuthenticated || profile === undefined) return;
+    if (isLoading) return;
     if (profile?.business_name) return;
     if (hasStartedRef.current) return;
     hasStartedRef.current = true;
     posthog.capture("onboarding_started");
-  }, [authLoading, isAuthenticated, profile]);
+  }, [isLoading, profile]);
 
-  if (authLoading || profile === undefined) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-bg-primary">
-        <Loader2 className="size-5 animate-spin text-text-secondary" />
-      </div>
-    );
-  }
-
-  if (!isAuthenticated || (profile && profile.business_name)) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-bg-primary">
-        <Loader2 className="size-5 animate-spin text-text-secondary" />
-      </div>
-    );
+  if (isLoading || (profile && profile.business_name)) {
+    return <LoadingScreen text="Loading onboarding..." />;
   }
 
   const handleNext = () => {
@@ -109,6 +98,11 @@ export default function OnboardingPage() {
         reply_tone: data.replyTone,
         auto_respond: data.rules.autoRespond,
         priority_detection: data.rules.priorityDetection,
+      });
+      updateBusinessContext({
+        business_name: data.businessName || "My Business",
+        business_url: data.businessUrl,
+        business_context: data.businessDescription,
       });
       setCompleted(true);
     }
@@ -142,8 +136,10 @@ export default function OnboardingPage() {
       onNext={handleNext}
       onBack={handleBack}
       businessUrl={data.businessUrl}
+      businessName={data.businessName}
       businessDescription={data.businessDescription}
       onUpdateUrl={(url) => updateData({ businessUrl: url })}
+      onUpdateName={(name) => updateData({ businessName: name })}
       onUpdateDescription={(desc) => updateData({ businessDescription: desc })}
     />,
     <StepConfiguration
@@ -159,15 +155,7 @@ export default function OnboardingPage() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-bg-primary relative overflow-hidden">
-      <div
-        className="absolute inset-0 pointer-events-none z-0"
-        style={{
-          backgroundImage: `
-            radial-gradient(circle at top right, var(--color-primary-muted), transparent 40%),
-            radial-gradient(circle at bottom left, var(--color-primary-light), transparent 30%)
-          `,
-        }}
-      />
+      <AuthBackground />
       <div className="z-10 w-full max-w-lg px-4">
         <div className="flex justify-center mb-8">
           <Link
@@ -212,16 +200,8 @@ export default function OnboardingPage() {
 function CompletedScreen({ data }: { data: OnboardingData }) {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-bg-primary relative overflow-hidden">
-      <div
-        className="absolute inset-0 pointer-events-none z-0"
-        style={{
-          backgroundImage: `
-            radial-gradient(circle at top right, var(--color-primary-muted), transparent 40%),
-            radial-gradient(circle at bottom left, var(--color-primary-light), transparent 30%)
-          `,
-        }}
-      />
-      <Confetti />
+      <AuthBackground />
+      <LogoFormation />
       <div className="z-10 w-full max-w-lg px-4 text-center">
         <motion.div
           variants={popIn}
