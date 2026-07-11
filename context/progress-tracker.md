@@ -6,9 +6,9 @@ Update this file after every completed feature. Any AI agent reading this should
 
 ## Current Status
 
-**Phase:** 5 — Dashboard (In Progress)
-**Last completed:** 21 Analytics Charts — Real Data
-**Next:** —
+**Phase:** 5 — Dashboard (Complete)
+**Last completed:** All 22 features + hackathon submission prep
+**Next:** Hackathon submission (due July 11)
 
 ---
 
@@ -123,15 +123,15 @@ Update this file after every completed feature. Any AI agent reading this should
 
 ## Hackathon Submission Checklist
 
-- [ ] Project Dockerized
-- [ ] Public GitHub repo + README
-- [ ] AMD/ROCm usage named explicitly in README and demo video
-- [ ] MIT-compliant, original work
-- [ ] Registered before July 2 for Fireworks credits
-- [ ] Fireworks AI API integrated
-- [ ] Convex realtime working
-- [ ] AMD Developer Cloud endpoint integrated
-- [ ] PostHog analytics events firing
+- [x] Project Dockerized
+- [x] Public GitHub repo + README (https://github.com/NabilJint/triage-ai)
+- [x] AMD/ROCm usage named explicitly in README and demo video
+- [x] MIT-compliant, original work (LICENSE added)
+- [ ] ~~Registered before July 2 for Fireworks credits~~ (deadline passed)
+- [x] Fireworks AI API integrated
+- [x] Convex realtime working (dev: canny-dog-569, prod: fleet-gnu-752)
+- [x] AMD Developer Cloud endpoint integrated
+- [x] PostHog analytics events firing
 - [x] Dashboard shows live data
 
 ---
