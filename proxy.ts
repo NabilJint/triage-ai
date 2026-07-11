@@ -1,3 +1,4 @@
+import type { NextRequest, NextFetchEvent } from "next/server";
 import {
   convexAuthNextjsMiddleware,
   createRouteMatcher,
@@ -6,14 +7,21 @@ import {
 
 const isPublicPage = createRouteMatcher(["/", "/login", "/onboarding", "/callback", "/debug", "/ingest(.*)", "/api/scrape-summarize"]);
 
-export default convexAuthNextjsMiddleware(async (request, { convexAuth }) => {
+const authMiddleware = convexAuthNextjsMiddleware(async (request, { convexAuth }) => {
   const isAuth = await convexAuth.isAuthenticated();
   const hasCode = request.nextUrl.searchParams.has("code");
 
   if (!isPublicPage(request) && !isAuth && !hasCode) {
     return nextjsMiddlewareRedirect(request, "/login");
   }
-}, { shouldHandleCode: () => false });
+});
+
+export default function middleware(request: NextRequest, event: NextFetchEvent) {
+  if (request.nextUrl.pathname.startsWith("/api/gmail/")) {
+    return;
+  }
+  return authMiddleware(request, event);
+}
 
 export const config = {
   matcher: ["/((?!.*\\..*|_next).*)", "/", "/(api|trpc)(.*)"],

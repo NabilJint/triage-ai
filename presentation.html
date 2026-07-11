@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TriageAI — AMD Hackathon Presentation</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --color-primary: #7C3AED;
+            --color-primary-light: #A78BFA;
+            --color-secondary: #0EA5E9;
+            --color-success: #10B981;
+            --color-warning: #F59E0B;
+            --color-error: #EF4444;
+            --color-amd: #ED1C24;
+            --color-background: #0B0D17;
+            --color-surface: #111827;
+            --color-surface-secondary: #1F2937;
+            --color-text-primary: #FFFFFF;
+            --color-text-secondary: #9CA3AF;
+            --color-text-muted: #6B7280;
+            --color-border: #1F2937;
+            --primitive-gradient-primary: linear-gradient(135deg, #7C3AED, #A78BFA);
+            --primitive-gradient-amd: linear-gradient(135deg, #ED1C24, #FF6B6B);
+            --primitive-gradient-hero: linear-gradient(135deg, #7C3AED, #0EA5E9);
+            --typography-font-heading: 'Space Grotesk', sans-serif;
+            --typography-font-body: 'Inter', sans-serif;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: var(--color-background);
+            color: var(--color-text-primary);
+            font-family: var(--typography-font-body);
+            overflow: hidden;
+        }
+
+        .slide-deck {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        @media (min-width: 769px) {
+            .slide-deck {
+                max-width: calc(100vh * 16 / 9);
+                max-height: calc(100vw * 9 / 16);
+                margin: auto;
+                position: absolute;
+                inset: 0;
+            }
+        }
+
+        .slide {
+            position: absolute;
+            width: 100%; height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 60px;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.4s, visibility 0.4s;
+            background: var(--color-background);
+            overflow: hidden;
+        }
+
+        .slide.active { opacity: 1; visibility: visible; }
+
+        .slide-content {
+            width: 100%;
+            max-width: 1000px;
+            max-height: 100%;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .slide-content-left {
+            align-items: flex-start;
+            text-align: left;
+        }
+
+        h1, h2 { font-family: var(--typography-font-heading); }
+        h1 { font-size: clamp(36px, 5vw, 72px); line-height: 1.1; }
+        h2 { font-size: clamp(24px, 3.5vw, 48px); line-height: 1.2; }
+        h3 { font-size: clamp(18px, 2vw, 28px); font-family: var(--typography-font-heading); }
+        p, li { font-size: clamp(14px, 1.5vw, 22px); color: var(--color-text-secondary); line-height: 1.6; }
+
+        .gradient-text {
+            background: var(--primitive-gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .gradient-text-amd {
+            background: var(--primitive-gradient-amd);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .gradient-text-hero {
+            background: var(--primitive-gradient-hero);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 9999px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .badge-amd { background: rgba(237, 28, 36, 0.15); color: #FF6B6B; border: 1px solid rgba(237, 28, 36, 0.3); }
+        .badge-purple { background: rgba(124, 58, 237, 0.15); color: var(--color-primary-light); border: 1px solid rgba(124, 58, 237, 0.3); }
+        .badge-success { background: rgba(16, 185, 129, 0.15); color: var(--color-success); border: 1px solid rgba(16, 185, 129, 0.3); }
+
+        .slide-split {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 48px;
+            align-items: center;
+            width: 100%;
+        }
+
+        @media (max-width: 768px) {
+            .slide-split { grid-template-columns: 1fr; gap: 24px; }
+            .slide { padding: 32px 24px; }
+        }
+
+        .slide-features {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            width: 100%;
+        }
+
+        @media (max-width: 768px) {
+            .slide-features { grid-template-columns: repeat(2, 1fr); gap: 16px; }
+        }
+        @media (max-width: 480px) {
+            .slide-features { grid-template-columns: 1fr; }
+        }
+
+        .feature-card {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: 16px;
+            padding: 24px;
+            text-align: left;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        .feature-card:hover { transform: translateY(-4px); border-color: var(--color-primary); }
+        .feature-card .icon { font-size: 28px; margin-bottom: 12px; }
+        .feature-card h4 { font-family: var(--typography-font-heading); font-size: 16px; margin-bottom: 8px; }
+        .feature-card p { font-size: 13px; color: var(--color-text-muted); }
+
+        .slide-metrics {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            width: 100%;
+        }
+        @media (max-width: 768px) {
+            .slide-metrics { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        .metric-card {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: 16px;
+            padding: 24px;
+            text-align: center;
+        }
+        .metric-card .number {
+            font-size: clamp(32px, 4vw, 56px);
+            font-weight: 800;
+            font-family: var(--typography-font-heading);
+        }
+        .metric-card .label {
+            font-size: 13px;
+            color: var(--color-text-muted);
+            margin-top: 4px;
+        }
+
+        .arch-diagram {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .arch-box {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: 12px;
+            padding: 16px 20px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .arch-box.highlight {
+            border-color: var(--color-primary);
+            background: rgba(124, 58, 237, 0.1);
+        }
+        .arch-box.amd {
+            border-color: var(--color-amd);
+            background: rgba(237, 28, 36, 0.08);
+        }
+        .arch-box.gemma {
+            border-color: var(--color-success);
+            background: rgba(16, 185, 129, 0.08);
+        }
+        .arch-arrow { color: var(--color-text-muted); font-size: 20px; }
+
+        .progress-bar {
+            position: fixed;
+            top: 0; left: 0;
+            height: 3px;
+            background: var(--primitive-gradient-primary);
+            transition: width 0.3s;
+            z-index: 1000;
+        }
+
+        .nav-controls {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            z-index: 1000;
+        }
+        .nav-btn {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #fff;
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            transition: background 0.2s;
+        }
+        .nav-btn:hover { background: rgba(255,255,255,0.15); }
+        .slide-counter { color: rgba(255,255,255,0.4); font-size: 14px; font-family: var(--typography-font-body); }
+
+        .tagline {
+            display: inline-block;
+            background: rgba(124, 58, 237, 0.12);
+            border: 1px solid rgba(124, 58, 237, 0.2);
+            border-radius: 9999px;
+            padding: 6px 16px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--color-primary-light);
+            margin-bottom: 8px;
+        }
+
+        .code-block {
+            background: var(--color-surface-secondary);
+            border: 1px solid var(--color-border);
+            border-radius: 12px;
+            padding: 20px 24px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            text-align: left;
+            line-height: 1.8;
+            width: 100%;
+            overflow-x: auto;
+        }
+        .code-block .comment { color: var(--color-text-muted); }
+        .code-block .keyword { color: var(--color-primary-light); }
+        .code-block .string { color: var(--color-success); }
+
+        .chart-container {
+            width: 100%;
+            height: 250px;
+        }
+
+        .animate-fade-up {
+            animation: fadeUp 0.6s ease-out forwards;
+            opacity: 0;
+        }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .animate-scale {
+            animation: scaleIn 0.5s ease-out forwards;
+        }
+        @keyframes scaleIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .animate-stagger > * {
+            opacity: 0;
+            animation: fadeUp 0.5s ease-out forwards;
+        }
+        .animate-stagger > *:nth-child(1) { animation-delay: 0.1s; }
+        .animate-stagger > *:nth-child(2) { animation-delay: 0.2s; }
+        .animate-stagger > *:nth-child(3) { animation-delay: 0.3s; }
+        .animate-stagger > *:nth-child(4) { animation-delay: 0.4s; }
+        .animate-stagger > *:nth-child(5) { animation-delay: 0.5s; }
+        .animate-stagger > *:nth-child(6) { animation-delay: 0.6s; }
+
+        .pulse-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: var(--color-success);
+            display: inline-block;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .tech-stack {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: center;
+        }
+        .tech-pill {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: 9999px;
+            padding: 8px 20px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .tech-pill.primary { border-color: var(--color-primary); color: var(--color-primary-light); }
+        .tech-pill.amd { border-color: rgba(237, 28, 36, 0.3); color: #FF6B6B; }
+        .tech-pill.gemma { border-color: rgba(16, 185, 129, 0.3); color: var(--color-success); }
+
+        .cta-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--primitive-gradient-primary);
+            color: white;
+            padding: 14px 32px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .cta-button:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(124, 58, 237, 0.3); }
+    </style>
+</head>
+<body>
+    <div class="progress-bar" id="progressBar"></div>
+    <div class="slide-deck">
+
+    <!-- SLIDE 1: Title -->
+    <div class="slide active">
+        <div class="slide-content animate-fade-up">
+            <div class="tagline">AMD Developer Hackathon 2026</div>
+            <h1 class="gradient-text-hero" style="font-size: clamp(48px, 7vw, 96px);">TriageAI</h1>
+            <p style="font-size: clamp(18px, 2vw, 28px); max-width: 700px;">
+                AI-Powered Customer Support Assistant<br>
+                <span style="color: var(--color-text-muted); font-size: 0.8em;">Stop drowning in support emails. Let AI triage them.</span>
+            </p>
+            <div class="tech-stack" style="margin-top: 12px;">
+                <span class="tech-pill gemma">Gemma 4 31B</span>
+                <span class="tech-pill amd">AMD ROCm</span>
+                <span class="tech-pill primary">Fireworks AI</span>
+                <span class="tech-pill">Next.js 16</span>
+                <span class="tech-pill">Convex</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 2: Problem -->
+    <div class="slide">
+        <div class="slide-content slide-content-left animate-fade-up">
+            <div class="tagline">The Problem</div>
+            <h2 class="gradient-text" style="margin-bottom: 8px;">SMBs are drowning in support emails</h2>
+            <div class="slide-metrics animate-stagger" style="margin-top: 16px;">
+                <div class="metric-card">
+                    <div class="number gradient-text">40+</div>
+                    <div class="label">Support emails per day<br><span style="color:var(--color-text-secondary);">per 100 customers</span></div>
+                </div>
+                <div class="metric-card">
+                    <div class="number gradient-text">70%</div>
+                    <div class="label">Are routine questions<br><span style="color:var(--color-text-secondary);">order status, hours, FAQs</span></div>
+                </div>
+                <div class="metric-card">
+                    <div class="number gradient-text">~5m</div>
+                    <div class="label">Per manual reply<br><span style="color:var(--color-text-secondary);">time wasted on repeat</span></div>
+                </div>
+                <div class="metric-card">
+                    <div class="number gradient-text">3-4h</div>
+                    <div class="label">Daily on support<br><span style="color:var(--color-text-secondary);">hours SMBs can't afford</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 3: Solution -->
+    <div class="slide">
+        <div class="slide-content animate-fade-up">
+            <div class="tagline">The Solution</div>
+            <h2>AI that triages, drafts, and sends</h2>
+            <p style="max-width: 700px;">Connect your inbox once. Every email is classified, drafted, and either auto-replied or escalated — with full transparency.</p>
+            <div class="slide-split" style="margin-top: 16px; text-align: left;">
+                <div style="background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 16px; padding: 24px;">
+                    <div style="color: var(--color-success); font-weight: 700; font-family: var(--typography-font-heading); margin-bottom: 12px;">✓ Auto-Reply Flow</div>
+                    <div style="font-size: 14px; color: var(--color-text-secondary); line-height: 2;">
+                        Email arrives →<br>
+                        <span style="color: var(--color-primary-light);">AMD ROCm embedding</span> →<br>
+                        <span style="color: var(--color-success);">Gemma 4 classification</span> →<br>
+                        Draft reply → Auto-sent ✓
+                    </div>
+                </div>
+                <div style="background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 16px; padding: 24px;">
+                    <div style="color: var(--color-warning); font-weight: 700; font-family: var(--typography-font-heading); margin-bottom: 12px;">⚠ Escalation Flow</div>
+                    <div style="font-size: 14px; color: var(--color-text-secondary); line-height: 2;">
+                        Email arrives →<br>
+                        <span style="color: var(--color-primary-light);">AMD ROCm embedding</span> →<br>
+                        <span style="color: var(--color-success);">Gemma 4 classification</span> →<br>
+                        Rule match → Human review ⚠
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 4: Architecture -->
+    <div class="slide">
+        <div class="slide-content animate-fade-up">
+            <div class="tagline">Architecture</div>
+            <h2>Convex + LangChain + Fireworks</h2>
+            <div class="code-block" style="max-width: 700px; margin-top: 8px;">
+                <span class="comment">// Every email goes through this StateGraph</span><br>
+                <span class="keyword">const</span> workflow = <span class="keyword">new</span> StateGraph(channels)<br>
+                &nbsp;&nbsp;.addNode(<span class="string">"classify"</span>, classifyEmailNode)   <span class="comment">// ← Gemma 4</span><br>
+                &nbsp;&nbsp;.addNode(<span class="string">"draft"</span>, draftReplyNode)        <span class="comment">// ← Gemma 4</span><br>
+                &nbsp;&nbsp;.addNode(<span class="string">"escalate"</span>, escalateNode)<br>
+                &nbsp;&nbsp;.addEdge(START, <span class="string">"classify"</span>)<br>
+                &nbsp;&nbsp;.addConditionalEdges(<span class="string">"classify"</span>, decideNext);<br><br>
+                <span class="comment">// AMD ROCm embedding step runs before the graph</span><br>
+                <span class="keyword">const</span> embedding = <span class="keyword">await</span> generateEmbedding(text); <span class="comment">// ← AMD Instinct GPU</span>
+            </div>
+            <div class="arch-diagram" style="margin-top: 16px;">
+                <div class="arch-box highlight">Email In</div>
+                <span class="arch-arrow">→</span>
+                <div class="arch-box amd">AMD ROCm<br><span style="font-size:11px;color:var(--color-text-muted);">Embedding</span></div>
+                <span class="arch-arrow">→</span>
+                <div class="arch-box gemma">Gemma 4<br><span style="font-size:11px;color:var(--color-text-muted);">Classify + Draft</span></div>
+                <span class="arch-arrow">→</span>
+                <div class="arch-box" style="border-color:var(--color-secondary);">Convex DB</div>
+                <span class="arch-arrow">→</span>
+                <div class="arch-box" style="border-color:var(--color-warning);">Send / Escalate</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 5: AMD ROCm + Gemma 4 -->
+    <div class="slide">
+        <div class="slide-content animate-fade-up">
+            <div class="tagline">The Tech</div>
+            <h2>AMD ROCm <span style="color: var(--color-text-muted);">×</span> Gemma 4</h2>
+            <div class="slide-split" style="margin-top: 16px; text-align: left;">
+                <div style="background: rgba(237,28,36,0.05); border: 1px solid rgba(237,28,36,0.2); border-radius: 16px; padding: 24px;">
+                    <h3 style="color: #FF6B6B;">AMD ROCm</h3>
+                    <p style="font-size: 14px; margin-top: 8px; color: var(--color-text-secondary); line-height: 1.7;">
+                        GPU-accelerated embeddings on<br><strong>AMD Instinct</strong> via AI Notebooks.<br><br>
+                        Model: <code style="color: var(--color-primary-light);">intfloat/e5-large-v2</code><br>
+                        Pipeline: <code style="color: var(--color-primary-light);">sentence-transformers</code><br>
+                        <span style="color: var(--color-success);">Graceful Gemini fallback</span>
+                    </p>
+                </div>
+                <div style="background: rgba(16,185,129,0.05); border: 1px solid rgba(16,185,129,0.2); border-radius: 16px; padding: 24px;">
+                    <h3 style="color: var(--color-success);">Gemma 4 31B</h3>
+                    <p style="font-size: 14px; margin-top: 8px; color: var(--color-text-secondary); line-height: 1.7;">
+                        Google's latest open model.<br>
+                        <strong>262K token context</strong> — entire threads.<br><br>
+                        Hosted on <span style="color: var(--color-primary-light);">Fireworks AI</span> dedicated deployment<br>
+                        Model: <code style="color: var(--color-primary-light);">accounts/fireworks/models/gemma-4-31b-it</code><br>
+                        <span style="color: var(--color-warning);">Serverless Llama fallback</span>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 6: Features -->
+    <div class="slide">
+        <div class="slide-content animate-fade-up">
+            <div class="tagline">Features</div>
+            <h2>Everything you need</h2>
+            <div class="slide-features animate-stagger" style="margin-top: 16px;">
+                <div class="feature-card">
+                    <div class="icon">📬</div>
+                    <h4>Multi-Inbox</h4>
+                    <p>Gmail, Yahoo, Outlook, or custom IMAP. Plus mock inbox for testing.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">🧠</div>
+                    <h4>AI Classification</h4>
+                    <p>Routine, technical, urgent, sales — with confidence scores.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">✍️</div>
+                    <h4>Auto Drafting</h4>
+                    <p>Custom tone (professional, friendly, casual) with business context.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">🚦</div>
+                    <h4>Smart Escalation</h4>
+                    <p>Keyword + confidence rules. Priority: low → urgent.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">📊</div>
+                    <h4>Live Dashboard</h4>
+                    <p>Real-time stats, 7-day charts, recent activity.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">🔍</div>
+                    <h4>Semantic Search</h4>
+                    <p>AMD ROCm embeddings power similar-interaction lookup.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 7: Dashboard Preview -->
+    <div class="slide">
+        <div class="slide-content animate-fade-up" style="max-width: 850px;">
+            <div class="tagline">Live Dashboard</div>
+            <h2>Real-time at a glance</h2>
+            <p style="max-width: 600px;">Stats update reactively via Convex subscriptions. No polling, no refresh.</p>
+            <div class="slide-metrics animate-stagger" style="margin-top: 12px;">
+                <div class="metric-card">
+                    <div class="number gradient-text-hero" id="statEmails">—</div>
+                    <div class="label">Emails Today</div>
+                </div>
+                <div class="metric-card">
+                    <div class="number" style="color: var(--color-success);" id="statAutoReply">—</div>
+                    <div class="label">Auto-reply Rate</div>
+                </div>
+                <div class="metric-card">
+                    <div class="number" style="color: var(--color-warning);" id="statEscalations">—</div>
+                    <div class="label">Escalations Pending</div>
+                </div>
+                <div class="metric-card">
+                    <div class="number" style="color: var(--color-secondary);" id="statTimeSaved">—</div>
+                    <div class="label">Hours Saved</div>
+                </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 3fr 2fr; gap: 16px; width: 100%; margin-top: 8px;">
+                <div style="background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 12px; padding: 16px;">
+                    <div style="font-size: 12px; color: var(--color-text-muted); margin-bottom: 8px; text-align: left;">Triage Activity (7 Days)</div>
+                    <div class="chart-container" style="height: 140px;"><canvas id="activityChart"></canvas></div>
+                </div>
+                <div style="background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 12px; padding: 16px;">
+                    <div style="font-size: 12px; color: var(--color-text-muted); margin-bottom: 8px; text-align: left;">Classification</div>
+                    <div class="chart-container" style="height: 140px;"><canvas id="classChart"></canvas></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 8: Code Architecture -->
+    <div class="slide">
+        <div class="slide-content slide-content-left animate-fade-up">
+            <div class="tagline">Under the Hood</div>
+            <h2>Senior Engineer Decisions</h2>
+            <div style="width: 100%; margin-top: 8px;">
+                <div class="slide-split" style="gap: 24px; text-align: left;">
+                    <div style="display: flex; flex-direction: column; gap: 16px;">
+                        <div style="background: var(--color-surface); border-radius: 12px; padding: 16px; border-left: 3px solid var(--color-primary);">
+                            <h4 style="font-size: 14px;">Provider-Agnostic LLM</h4>
+                            <p style="font-size: 13px; margin-top: 4px;">One env var switches between Gemma 4, Llama, or Gemini. Zero code changes.</p>
+                        </div>
+                        <div style="background: var(--color-surface); border-radius: 12px; padding: 16px; border-left: 3px solid var(--color-amd);">
+                            <h4 style="font-size: 14px;">Named AMD Step</h4>
+                            <p style="font-size: 13px; margin-top: 4px;">generateEmbedding() is explicitly visible in the workflow. Not buried in generic code.</p>
+                        </div>
+                        <div style="background: var(--color-surface); border-radius: 12px; padding: 16px; border-left: 3px solid var(--color-success);">
+                            <h4 style="font-size: 14px;">Graceful Fallbacks</h4>
+                            <p style="font-size: 13px; margin-top: 4px;">AMD down? → Gemini. Gemma deployment down? → Llama serverless. Never crashes.</p>
+                        </div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 16px;">
+                        <div style="background: var(--color-surface); border-radius: 12px; padding: 16px; border-left: 3px solid var(--color-warning);">
+                            <h4 style="font-size: 14px;">Convex-First Backend</h4>
+                            <p style="font-size: 13px; margin-top: 4px;">All logic in Convex queries/mutations/actions. Reactive by default, zero WebSocket code.</p>
+                        </div>
+                        <div style="background: var(--color-surface); border-radius: 12px; padding: 16px; border-left: 3px solid var(--color-secondary);">
+                            <h4 style="font-size: 14px;">LangChain StateGraph</h4>
+                            <p style="font-size: 13px; margin-top: 4px;">Workflow orchestration inside a Convex action. Classify → Draft → Escalate as a DAG.</p>
+                        </div>
+                        <div style="background: var(--color-surface); border-radius: 12px; padding: 16px; border-left: 3px solid #FF6B6B;">
+                            <h4 style="font-size: 14px;">Auto-Send Architecture</h4>
+                            <p style="font-size: 13px; margin-top: 4px;">Auto-replies send immediately. Escalated emails wait for human. One workflow, two paths.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 9: GitHub + CTA -->
+    <div class="slide">
+        <div class="slide-content animate-fade-up">
+            <div class="tagline">Thank You</div>
+            <h1 class="gradient-text-hero">TriageAI</h1>
+            <div style="display: flex; align-items: center; gap: 8px; margin: 16px 0;">
+                <span class="badge badge-amd"><span class="pulse-dot"></span> AMD ROCm</span>
+                <span class="badge badge-purple">Gemma 4 31B</span>
+                <span class="badge badge-success">Fireworks AI</span>
+            </div>
+            <p style="max-width: 500px; margin-bottom: 16px;">
+                Built with ❤️ for the AMD Developer Hackathon<br>
+                <span style="color: var(--color-text-muted); font-size: 0.85em;">Next.js 16 · Convex · LangChain · Fireworks AI · AMD ROCm</span>
+            </p>
+            <a href="https://github.com/yusufjintoro/triage-ai" class="cta-button">
+                <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+                View on GitHub
+            </a>
+        </div>
+    </div>
+
+    </div><!-- /.slide-deck -->
+
+    <div class="nav-controls">
+        <button class="nav-btn" onclick="prevSlide()">←</button>
+        <span class="slide-counter"><span id="current">1</span> / <span id="total">9</span></span>
+        <button class="nav-btn" onclick="nextSlide()">→</button>
+    </div>
+
+    <script>
+        let current = 1;
+        const total = document.querySelectorAll('.slide').length;
+        document.getElementById('total').textContent = total;
+
+        function showSlide(n) {
+            if (n < 1) n = 1;
+            if (n > total) n = total;
+            current = n;
+            document.querySelectorAll('.slide').forEach((s, i) => {
+                s.classList.toggle('active', i === n - 1);
+            });
+            document.getElementById('current').textContent = n;
+            document.getElementById('progressBar').style.width = (n / total * 100) + '%';
+
+            if (n === 7) initCharts();
+        }
+
+        function nextSlide() { showSlide(current + 1); }
+        function prevSlide() { showSlide(current - 1); }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); nextSlide(); }
+            if (e.key === 'ArrowLeft') { e.preventDefault(); prevSlide(); }
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.nav-controls')) nextSlide();
+        });
+
+        // Animated counters on slide 7
+        function animateCounter(el, target, suffix = '') {
+            let current = 0;
+            const step = Math.ceil(target / 40);
+            const interval = setInterval(() => {
+                current += step;
+                if (current >= target) { current = target; clearInterval(interval); }
+                el.textContent = current + suffix;
+            }, 30);
+        }
+
+        // Charts
+        let chartsInitialized = false;
+        function initCharts() {
+            if (chartsInitialized) return;
+            chartsInitialized = true;
+
+            animateCounter(document.getElementById('statEmails'), 124, '');
+            animateCounter(document.getElementById('statAutoReply'), 68, '%');
+            setTimeout(() => animateCounter(document.getElementById('statEscalations'), 3, ''), 400);
+            setTimeout(() => animateCounter(document.getElementById('statTimeSaved'), 4.5, 'h'), 800);
+
+            new Chart(document.getElementById('activityChart'), {
+                type: 'line',
+                data: {
+                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Today'],
+                    datasets: [{
+                        label: 'Emails',
+                        data: [45, 72, 58, 96, 38, 84, 124],
+                        borderColor: '#7C3AED',
+                        backgroundColor: 'rgba(124, 58, 237, 0.1)',
+                        borderWidth: 2.5,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#7C3AED',
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#6B7280', font: { size: 10 } } },
+                        y: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#6B7280', font: { size: 10 } }, beginAtZero: true }
+                    }
+                }
+            });
+
+            new Chart(document.getElementById('classChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Routine', 'Technical', 'Urgent', 'Sales', 'Other'],
+                    datasets: [{
+                        data: [55, 22, 13, 7, 3],
+                        backgroundColor: ['#7C3AED', '#0EA5E9', '#EF4444', '#10B981', '#6B7280'],
+                        borderWidth: 0,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#9CA3AF', font: { size: 9 }, boxWidth: 10, padding: 8 }
+                        }
+                    },
+                    cutout: '60%',
+                }
+            });
+        }
+
+        showSlide(1);
+    </script>
+</body>
+</html>

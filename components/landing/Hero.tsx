@@ -5,6 +5,7 @@ import { Spotlight } from "@/components/ui/spotlight";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Button as MovingBorderBtn } from "@/components/ui/moving-border";
+import { TypewriterEffectSmooth } from "@/components/ui/typewriter-effect";
 import { FadeInUp } from "./FadeInUp";
 
 const decisionCards = [
@@ -31,9 +32,21 @@ export function Hero() {
       <div className="max-w-1280px mx-auto px-4">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-start">
           <div className="max-w-2xl">
-            <h1 className="text-4xl md:text-5xl md:leading-[52px] font-extrabold text-text-darkest tracking-tight">
-              AI that handles your support inbox while you sleep
-            </h1>
+            <TypewriterEffectSmooth
+              words={[
+                { text: "AI" },
+                { text: "that" },
+                { text: "handles" },
+                { text: "your" },
+                { text: "support" },
+                { text: "inbox" },
+                { text: "while" },
+                { text: "you" },
+                { text: "sleep.", className: "text-primary" },
+              ]}
+              className="text-left text-4xl md:text-5xl md:leading-[52px] font-extrabold"
+              cursorClassName="bg-primary"
+            />
             <FadeInUp delay={0.15} className="mt-6">
               <p className="text-xl text-text-secondary max-w-2xl leading-relaxed">
                 TriageAI reads every incoming email, auto-responds to routine

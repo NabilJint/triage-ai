@@ -1,0 +1,22 @@
+version: "3.9"
+
+services:
+  triageai:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_CONVEX_URL=${NEXT_PUBLIC_CONVEX_URL:-https://canny-dog-569.convex.cloud}
+      - CONVEX_DEPLOYMENT=${CONVEX_DEPLOYMENT:-dev:jint}
+      - LLM_PROVIDER=${LLM_PROVIDER:-gemma}
+      - FIREWORKS_API_KEY=${FIREWORKS_API_KEY}
+      - FIREWORKS_MODEL=${FIREWORKS_MODEL:-accounts/fireworks/models/llama-v3p3-70b-instruct}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - NEXT_PUBLIC_POSTHOG_KEY=${NEXT_PUBLIC_POSTHOG_KEY}
+      - NEXT_PUBLIC_POSTHOG_HOST=${NEXT_PUBLIC_POSTHOG_HOST}
+      - AMD_CLOUD_ENDPOINT=${AMD_CLOUD_ENDPOINT}
+      - AMD_CLOUD_API_KEY=${AMD_CLOUD_API_KEY}
+    restart: unless-stopped

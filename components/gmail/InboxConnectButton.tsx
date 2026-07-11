@@ -4,10 +4,11 @@ import { Check } from "lucide-react";
 
 type InboxConnectButtonProps = {
   connected: boolean;
+  email: string | null;
   onToggle: () => void;
 };
 
-export function InboxConnectButton({ connected, onToggle }: InboxConnectButtonProps) {
+export function InboxConnectButton({ connected, email, onToggle }: InboxConnectButtonProps) {
   return (
     <button
       onClick={onToggle}
@@ -29,7 +30,7 @@ export function InboxConnectButton({ connected, onToggle }: InboxConnectButtonPr
         </p>
         <p className="text-xs text-text-muted">
           {connected
-            ? "Connected — support@yourcompany.com"
+            ? `Connected — ${email ?? "your connected inbox"}`
             : "Connect your support inbox"}
         </p>
       </div>

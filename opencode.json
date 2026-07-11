@@ -7,7 +7,7 @@
       "enabled": true,
       "oauth": false,
       "headers": {
-        "X-Goog-Api-Key": "{env:STITCH_API_KEY}"
+        "X-Goog-Api-Key": "${STITCH_API_KEY}"
       }
     },
     "shadcn": {

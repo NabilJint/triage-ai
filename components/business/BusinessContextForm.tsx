@@ -93,7 +93,7 @@ export function BusinessContextForm({
           </p>
         )}
         {fetchError && (
-          <p className="text-xs text-text-muted mt-1.5">{fetchError}</p>
+          <p className="text-xs text-error mt-1.5">{fetchError}</p>
         )}
         <p className="text-xs text-text-muted mt-1.5">
           We&apos;ll scan your site to pre-fill your business details.

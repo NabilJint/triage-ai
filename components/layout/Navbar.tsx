@@ -29,8 +29,8 @@ const landingLinks = [
 
 const appLinks = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/decisions", label: "Triage Feed", icon: ListTodo },
-  { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/dashboard/decisions", label: "Triage Feed", icon: ListTodo },
+  { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 
 type NavbarProps = {

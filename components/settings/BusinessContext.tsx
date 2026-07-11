@@ -18,11 +18,13 @@ import { BusinessContextForm } from "@/components/business/BusinessContextForm";
 export function BusinessContext() {
   const userProfile = useQuery(api.userProfiles.getMe);
   const updateBusinessContext = useMutation(api.userProfiles.updateBusinessContext);
+  const invalidatePreviews = useMutation(api.userProfiles.invalidateReplyPreviews);
 
   const [url, setUrl] = useState("");
   const [businessName, setBusinessName] = useState("");
   const [description, setDescription] = useState("");
   const [saved, setSaved] = useState(false);
+  const [urlError, setUrlError] = useState(false);
 
   useEffect(() => {
     if (userProfile) {
@@ -33,12 +35,18 @@ export function BusinessContext() {
   }, [userProfile]);
 
   const handleSave = async () => {
+    if (url && !/^https?:\/\/.+/.test(url)) {
+      setUrlError(true);
+      return;
+    }
+    setUrlError(false);
     try {
       await updateBusinessContext({
         business_name: businessName || "My Business",
         business_url: url || undefined,
         business_context: description,
       });
+      await invalidatePreviews();
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch {
@@ -70,7 +78,8 @@ export function BusinessContext() {
         url={url}
         name={businessName}
         description={description}
-        onUrlChange={setUrl}
+        urlError={urlError}
+        onUrlChange={(u) => { setUrlError(false); setUrl(u); }}
         onNameChange={setBusinessName}
         onDescriptionChange={setDescription}
       />

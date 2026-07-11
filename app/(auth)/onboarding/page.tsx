@@ -14,12 +14,57 @@ import { api } from "@/convex/_generated/api";
 import { LoadingScreen } from "@/components/ui/loading-screen";
 import { useAuthGuard } from "@/lib/hooks/useAuthGuard";
 import { AuthBackground } from "@/components/ui/auth-background";
+import { BackgroundBeams } from "@/components/ui/background-beams";
 import Link from "next/link";
 import { StepWelcome } from "@/components/onboarding/StepWelcome";
 import { StepConnectInbox } from "@/components/onboarding/StepConnectInbox";
 import { StepBusinessContext } from "@/components/onboarding/StepBusinessContext";
 import { StepConfiguration } from "@/components/onboarding/StepConfiguration";
 import { LogoFormation } from "@/components/success/LogoFormation";
+import type { EscalationRule } from "@/types";
+
+const defaultEscalationRules: EscalationRule[] = [
+  {
+    id: "confidence",
+    condition: "confidence_below",
+    value: 0.6,
+    priority: "medium",
+    action: "escalate",
+    label: "Confidence below 60%",
+    desc: "Escalate when the AI is unsure about the classification",
+    enabled: true,
+  },
+  {
+    id: "refund",
+    condition: "contains",
+    value: "refund",
+    priority: "high",
+    action: "escalate",
+    label: "Contains 'refund'",
+    desc: "Refund requests always need human review",
+    enabled: true,
+  },
+  {
+    id: "urgent",
+    condition: "contains",
+    value: "urgent",
+    priority: "urgent",
+    action: "escalate",
+    label: "Contains 'urgent'",
+    desc: "Escalate time-sensitive requests immediately",
+    enabled: true,
+  },
+  {
+    id: "complaint",
+    condition: "contains",
+    value: "complaint",
+    priority: "medium",
+    action: "escalate",
+    label: "Contains 'complaint'",
+    desc: "Customer complaints need careful handling",
+    enabled: false,
+  },
+];
 
 type Rules = {
   autoRespond: boolean;
@@ -29,7 +74,6 @@ type Rules = {
 };
 
 type OnboardingData = {
-  gmailConnected: boolean;
   businessUrl: string;
   businessName: string;
   businessDescription: string;
@@ -40,7 +84,6 @@ type OnboardingData = {
 const TOTAL_STEPS = 4;
 
 const defaultData: OnboardingData = {
-  gmailConnected: false,
   businessUrl: "",
   businessName: "",
   businessDescription: "",
@@ -55,15 +98,30 @@ const defaultData: OnboardingData = {
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useState(() => {
+    if (typeof window !== "undefined") {
+      const s = new URLSearchParams(window.location.search).get("ostep");
+      if (s) return Math.min(parseInt(s, 10), TOTAL_STEPS - 1);
+    }
+    return 0;
+  });
   const [completed, setCompleted] = useState(false);
   const [data, setData] = useState<OnboardingData>(defaultData);
   const { profile, isLoading } = useAuthGuard();
   const updateBusinessContext = useMutation(api.userProfiles.updateBusinessContext);
+  const saveReplyTone = useMutation(api.userProfiles.saveReplyTone);
+  const saveEscalationRules = useMutation(api.userProfiles.saveEscalationRules);
+  const saveReplyPreviews = useMutation(api.userProfiles.saveReplyPreviews);
+  const connection = useQuery(api.inboxConnections.getConnection);
+  const disconnect = useMutation(api._gmailHelpers.disconnectGmail);
+  const connectImapMut = useMutation(api.inboxConnections.connectImap);
+  const gmailConnected = connection?.is_active ?? false;
+  const connectedEmail = connection?.email ?? null;
   const hasStartedRef = useRef(false);
+  const completedRef = useRef(false);
 
   useEffect(() => {
-    if (!profile) return;
+    if (!profile || completedRef.current) return;
     if (profile.business_name) {
       router.push("/dashboard");
     }
@@ -76,6 +134,15 @@ export default function OnboardingPage() {
     hasStartedRef.current = true;
     posthog.capture("onboarding_started");
   }, [isLoading, profile]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("gmail")) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("gmail");
+      router.replace(url.pathname + url.search);
+    }
+  }, [router, gmailConnected]);
 
   if (isLoading || (profile && profile.business_name)) {
     return <LoadingScreen text="Loading onboarding..." />;
@@ -94,16 +161,42 @@ export default function OnboardingPage() {
         total_steps: TOTAL_STEPS,
       });
       posthog.capture("onboarding_completed", {
-        gmail_connected: data.gmailConnected,
+        gmail_connected: gmailConnected,
         reply_tone: data.replyTone,
         auto_respond: data.rules.autoRespond,
         priority_detection: data.rules.priorityDetection,
       });
-      updateBusinessContext({
-        business_name: data.businessName || "My Business",
-        business_url: data.businessUrl,
-        business_context: data.businessDescription,
-      });
+      const businessContext = data.businessDescription;
+
+      Promise.all([
+        updateBusinessContext({
+          business_name: data.businessName || "My Business",
+          business_url: data.businessUrl,
+          business_context: businessContext,
+        }),
+        saveReplyTone({ tone: data.replyTone }),
+        saveEscalationRules({ rules: defaultEscalationRules }),
+        (async () => {
+          try {
+            const res = await fetch("/api/preview-reply", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ tone: data.replyTone, businessContext }),
+            });
+            if (!res.ok) return;
+            const preview = await res.json();
+            if (preview.subject && preview.body) {
+              await saveReplyPreviews({
+                previews: { [data.replyTone]: { subject: preview.subject, body: preview.body } },
+                contextHash: businessContext,
+              });
+            }
+          } catch {
+            // preview generation is best-effort
+          }
+        })(),
+      ]).catch(console.error);
+      completedRef.current = true;
       setCompleted(true);
     }
   };
@@ -119,7 +212,7 @@ export default function OnboardingPage() {
   };
 
   if (completed) {
-    return <CompletedScreen data={data} />;
+    return       <CompletedScreen data={data} gmailConnected={gmailConnected} />;
   }
 
   const steps = [
@@ -128,8 +221,18 @@ export default function OnboardingPage() {
       key="connect"
       onNext={handleNext}
       onBack={handleBack}
-      gmailConnected={data.gmailConnected}
-      onToggleGmail={() => updateData({ gmailConnected: !data.gmailConnected })}
+      gmailConnected={gmailConnected}
+      connectedEmail={connectedEmail}
+      onToggleGmail={() => {
+        if (gmailConnected) {
+          disconnect();
+        } else {
+          window.location.replace(`/api/gmail/auth?state=/onboarding?ostep=${step}`);
+        }
+      }}
+      onConnectImap={async (args) => {
+        await connectImapMut(args);
+      }}
     />,
     <StepBusinessContext
       key="context"
@@ -156,6 +259,7 @@ export default function OnboardingPage() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-bg-primary relative overflow-hidden">
       <AuthBackground />
+      <BackgroundBeams />
       <div className="z-10 w-full max-w-lg px-4">
         <div className="flex justify-center mb-8">
           <Link
@@ -197,11 +301,14 @@ export default function OnboardingPage() {
   );
 }
 
-function CompletedScreen({ data }: { data: OnboardingData }) {
+function CompletedScreen({ data, gmailConnected }: { data: OnboardingData; gmailConnected: boolean }) {
+  const router = useRouter();
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-bg-primary relative overflow-hidden">
       <AuthBackground />
-      <LogoFormation />
+      <BackgroundBeams />
+      <LogoFormation onComplete={() => router.push("/dashboard")} />
       <div className="z-10 w-full max-w-lg px-4 text-center">
         <motion.div
           variants={popIn}
@@ -232,7 +339,7 @@ function CompletedScreen({ data }: { data: OnboardingData }) {
                     strokeWidth={2}
                   />
                   <span>
-                    Inbox {data.gmailConnected ? "connected" : "configured"}
+                    Inbox {gmailConnected ? "connected" : "configured"}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-text-secondary">

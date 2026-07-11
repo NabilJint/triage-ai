@@ -1,7 +1,6 @@
 "use client";
 
 import { motion } from "motion/react";
-import { Navbar } from "@/components/layout/Navbar";
 import { InboxConnection } from "@/components/settings/InboxConnection";
 import { BusinessContext } from "@/components/settings/BusinessContext";
 import { EscalationRules } from "@/components/settings/EscalationRules";
@@ -23,8 +22,6 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-bg-primary">
-      <Navbar mode="app" />
       <motion.div
         className="max-w-3xl mx-auto px-6 py-10"
         variants={pageVariants}
@@ -58,6 +55,5 @@ export default function SettingsPage() {
           ))}
         </motion.div>
       </motion.div>
-    </div>
   );
 }

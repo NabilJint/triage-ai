@@ -266,7 +266,8 @@ See `context/build-plan.md` for full details.
 | `NEXT_PUBLIC_CONVEX_URL` | lib/convex-client.ts |
 | `CONVEX_DEPLOYMENT` | Convex deployment |
 | `FIREWORKS_API_KEY` | lib/fireworks.ts, lib/llm.ts |
-| `LLM_PROVIDER` | lib/llm.ts — `"fireworks"` (default) or `"gemini"` |
+| `LLM_PROVIDER` | lib/llm.ts — `"gemma"` (default), `"fireworks"`, or `"gemini"` |
+| `FIREWORKS_MODEL` | lib/llm.ts, convex/agent/lib.ts — defaults to `accounts/fireworks/models/llama-v3p3-70b-instruct`; set to `accounts/fireworks/models/gemma-4-31b-it` when dedicated deployment is created |
 | `GOOGLE_API_KEY` | lib/llm.ts — used when `LLM_PROVIDER=gemini` |
 | `GOOGLE_CLIENT_ID` | Convex Auth |
 | `GOOGLE_CLIENT_SECRET` | Convex Auth |

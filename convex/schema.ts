@@ -12,6 +12,10 @@ export default defineSchema({
     business_url: v.optional(v.string()),
     plan: v.string(),
     business_context: v.optional(v.string()),
+    escalation_rules: v.optional(v.any()),
+    reply_tone: v.optional(v.string()),
+    reply_previews: v.optional(v.any()),
+    reply_previews_context: v.optional(v.string()),
     created_at: v.string(),
     updated_at: v.string(),
   })
@@ -21,10 +25,16 @@ export default defineSchema({
   inboxConnections: defineTable({
     user_id: v.id("users"),
     provider: v.string(),
-    credentials: v.optional(v.object({})),
+    email: v.optional(v.string()),
+    credentials: v.optional(v.any()),
     connected_at: v.string(),
     is_active: v.boolean(),
-  }).index("by_user", ["user_id"]),
+    watch_topic: v.optional(v.string()), // Gmail notification topic
+    last_error: v.optional(v.string()), // Last error message if connection failed
+    error_at: v.optional(v.string()), // Timestamp of last error
+  })
+    .index("by_user", ["user_id"])
+    .index("by_user_and_provider", ["user_id", "provider"]),
 
   emails: defineTable({
     user_id: v.id("users"),
@@ -36,11 +46,13 @@ export default defineSchema({
     body_html: v.optional(v.string()),
     received_at: v.string(),
     status: v.string(),
+    retry_count: v.optional(v.number()),
     gmail_message_id: v.optional(v.string()),
     thread_id: v.optional(v.string()),
   })
     .index("by_user_and_received", ["user_id", "received_at"])
-    .index("by_inbox_connection", ["inbox_connection_id"]),
+    .index("by_inbox_connection", ["inbox_connection_id"])
+    .index("by_gmail_message_id", ["gmail_message_id"]),
 
   triageDecisions: defineTable({
     user_id: v.id("users"),
@@ -73,9 +85,36 @@ export default defineSchema({
     .index("by_decision", ["decision_id"]),
 
   customerEmbeddings: defineTable({
+    email_id: v.optional(v.id("emails")),
     email_address: v.string(),
     embedding: v.array(v.float64()),
     updated_at: v.string(),
     used_in_query: v.boolean(),
-  }).index("by_email", ["email_address"]),
+  })
+    .index("by_email", ["email_address"])
+    .index("by_email_id", ["email_id"]),
+
+  emailListenerErrors: defineTable({
+    user_id: v.id("users"),
+    provider: v.string(),
+    error: v.string(),
+    error_at: v.string(),
+    resolved: v.boolean(),
+    resolved_at: v.optional(v.string()),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_user_and_resolved", ["user_id", "resolved"]),
+
+  gmailAccounts: defineTable({
+    user_id: v.id("users"),
+    gmail_email: v.string(),
+    refresh_token: v.string(),
+    history_id: v.optional(v.string()),
+    watch_expiration: v.optional(v.number()),
+    is_active: v.boolean(),
+    created_at: v.string(),
+    updated_at: v.string(),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_gmail_email", ["gmail_email"]),
 });

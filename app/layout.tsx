@@ -4,10 +4,11 @@ import "./globals.css";
 import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { ConvexClientProvider } from "./ConvexClientProvider";
+import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
 import { PostHogProvider } from "@/components/PostHogProvider";
 import { PostHogAuthWatcher } from "@/components/PostHogAuthWatcher";
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
   title: "TriageAI — AI-Powered Customer Support Assistant",
@@ -26,15 +27,23 @@ export default function RootLayout({
       className={cn("h-full", "antialiased", "font-sans", geist.variable)}
       suppressHydrationWarning
     >
+      <head>
+        <link
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+          rel="stylesheet"
+        />
+      </head>
       <body className="min-h-full flex flex-col bg-bg-primary text-text-primary">
-        <PostHogProvider>
-          <ConvexClientProvider>
-            <ThemeProvider>
-              {children}
-              <PostHogAuthWatcher />
-            </ThemeProvider>
-          </ConvexClientProvider>
-        </PostHogProvider>
+        <ConvexAuthNextjsServerProvider>
+          <PostHogProvider>
+            <ConvexClientProvider>
+              <ThemeProvider>
+                {children}
+                <PostHogAuthWatcher />
+              </ThemeProvider>
+            </ConvexClientProvider>
+          </PostHogProvider>
+        </ConvexAuthNextjsServerProvider>
       </body>
     </html>
   );

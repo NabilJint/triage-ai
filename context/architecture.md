@@ -42,13 +42,13 @@
 │   │   └── callback/
 │   │       └── page.tsx                   → OAuth callback handler
 │   ├── dashboard/
-│   │   └── page.tsx                       → Main dashboard with live stats
-│   ├── settings/
-│   │   └── page.tsx                       → Inbox connection + rules + business context
-│   ├── decisions/
-│   │   ├── page.tsx                       → Live triage feed
-│   │   └── [id]/
-│   │       └── page.tsx                   → Individual decision details
+│   │   ├── page.tsx                       → Main dashboard with live stats
+│   │   ├── settings/
+│   │   │   └── page.tsx                   → Inbox connection + rules + business context
+│   │   └── decisions/
+│   │       ├── page.tsx                   → Live triage feed
+│   │       └── [id]/
+│   │           └── page.tsx               → Individual decision details
 │   └── api/
 │       └── scrape-summarize/
 │           └── route.ts                   → Fetch URL + strip + Fireworks summarize
@@ -412,7 +412,7 @@ export async function generateEmbedding(text: string): Promise<number[]> {
 
 - Provider: Convex Auth or Clerk
 - Methods: Google OAuth
-- Protected routes: `/dashboard`, `/settings`, `/decisions`, `/decisions/[id]`
+- Protected routes: `/dashboard`, `/dashboard/settings`, `/dashboard/decisions`, `/dashboard/decisions/[id]`
 - Public routes: `/`, `/login`
 - Middleware protects routes (Next.js 16 uses `proxy.ts`)
 - On login → redirect to `/dashboard`

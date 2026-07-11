@@ -15,6 +15,7 @@ import { popIn, staggerContainer, staggerItem } from "@/lib/variants";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useAuthGuard } from "@/lib/hooks/useAuthGuard";
 import { AuthBackground } from "@/components/ui/auth-background";
+import { BackgroundBeams } from "@/components/ui/background-beams";
 import Link from "next/link";
 
 export default function LoginPage() {
@@ -61,6 +62,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-bg-primary relative overflow-hidden">
       <AuthBackground />
+      <BackgroundBeams />
       <motion.div
         className="z-10 w-full max-w-md px-4 md:px-0"
         variants={staggerContainer}

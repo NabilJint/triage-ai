@@ -13,7 +13,10 @@ export function useWebsiteScraper() {
   const [error, setError] = useState("");
 
   const scrape = async (url: string): Promise<ScrapeResult | null> => {
-    if (!url || !/^https?:\/\/.+/.test(url)) return null;
+    if (!url || !/^https?:\/\/.+/.test(url)) {
+      setError("Please enter a valid URL starting with http:// or https://");
+      return null;
+    }
     setLoading(true);
     setError("");
     try {
