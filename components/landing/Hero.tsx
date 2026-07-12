@@ -25,7 +25,7 @@ const decisionCards = [
 
 export function Hero() {
   return (
-    <section className="relative bg-bg-primary py-16 md:py-24 overflow-hidden">
+    <section className="relative bg-bg-primary py-16 md:py-24">
       <div className="absolute inset-0">
         <Spotlight className="opacity-60" fillOpacity={0.35} />
       </div>
@@ -44,7 +44,7 @@ export function Hero() {
                 { text: "you" },
                 { text: "sleep.", className: "text-primary" },
               ]}
-              className="text-left text-4xl md:text-5xl md:leading-[52px] font-extrabold"
+              className="text-left text-4xl md:text-5xl md:leading-[52px] font-extrabold text-text-darkest"
               cursorClassName="bg-primary"
             />
             <FadeInUp delay={0.15} className="mt-6">

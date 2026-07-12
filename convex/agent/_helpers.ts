@@ -22,12 +22,19 @@ export const getEmailForProcessing = internalQuery({
       )
       .first();
 
+    // Get user's connected Gmail email to detect self-sends
+    const gmailAccount = await ctx.db
+      .query("gmailAccounts")
+      .withIndex("by_user", (q) => q.eq("user_id", email.user_id))
+      .first();
+
     return {
       email,
       businessName: userProfile?.business_name ?? null,
       businessContext: userProfile?.business_context ?? null,
       escalationRules: (userProfile?.escalation_rules as any[]) ?? [],
       replyTone: userProfile?.reply_tone ?? "professional",
+      userEmail: gmailAccount?.gmail_email ?? null,
     };
   },
 });
@@ -49,6 +56,15 @@ export const saveTriageDecision = internalMutation({
       .filter((q) => q.eq(q.field("_id"), args.emailId))
       .first();
     if (!email) throw new Error("Email not found");
+
+    // Deduplication: skip if this email already has a decision
+    const existingDecision = await ctx.db
+      .query("triageDecisions")
+      .withIndex("by_email", (q) => q.eq("email_id", args.emailId))
+      .first();
+    if (existingDecision) {
+      return existingDecision._id;
+    }
 
     const now = new Date().toISOString();
 

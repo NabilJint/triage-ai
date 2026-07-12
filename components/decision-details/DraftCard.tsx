@@ -5,7 +5,7 @@ import { useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { cn } from "@/lib/utils";
-import { CardContainer, CardBody, CardItem } from "@/components/ui/3d-card";
+import { Card, CardContent } from "@/components/ui/card";
 import posthog from "posthog-js";
 
 type DraftCardProps = {
@@ -98,7 +98,6 @@ export function DraftCard({ decisionId, draftText, action, emailStatus }: DraftC
     setFeedback(null);
 
     try {
-      // Save draft first if there are unsaved changes
       if (hasChanges) {
         await updateDraft({ decisionId, draftText: draft });
       }
@@ -115,96 +114,170 @@ export function DraftCard({ decisionId, draftText, action, emailStatus }: DraftC
   }, [decisionId, draft, hasChanges, isSending, sendReply, updateDraft, showFeedback]);
 
   return (
-    <CardContainer containerClassName="py-0 w-full" className="w-full">
-      <CardBody className="w-full h-auto p-0 [transform-style:preserve-3d]">
-        <CardItem
-          translateZ={20}
+    <Card
+      className={cn(
+        "border-l-4",
+        isAutoReply ? "border-success" : "border-primary",
+      )}
+    >
+      <CardContent className="p-6">
+        <div className="flex items-center gap-2">
+          <span
+            className={cn(
+              "material-symbols-outlined text-[20px]",
+              isAutoReply ? "text-success" : "text-primary",
+            )}
+          >
+            {isAutoReply ? "check_circle" : "auto_fix_high"}
+          </span>
+          <h2 className="text-lg font-semibold text-text-primary">
+            {isAutoReply ? "AI Sent Reply" : "Draft Reply"}
+          </h2>
+        </div>
+
+        <textarea
+          value={draft}
+          onChange={(e) => {
+            setDraft(e.target.value);
+            if (!isEditing) setIsEditing(true);
+          }}
+          rows={6}
+          readOnly={isAutoReply || isSent}
+          placeholder={isEmpty ? "Write your reply here..." : undefined}
           className={cn(
-            "w-full bg-surface border border-border rounded-xl p-6 shadow-card border-l-4",
-            isAutoReply ? "border-success" : "border-primary",
+            "w-full p-4 border border-border rounded-lg text-sm text-text-primary resize-none",
+            isAutoReply || isSent
+              ? "bg-surface-secondary cursor-default"
+              : "bg-surface-secondary focus:border-secondary focus:ring-1 focus:ring-secondary",
+            isEmpty && !isAutoReply && "placeholder:text-text-muted",
           )}
-        >
-          <CardItem translateZ={30} className="w-full">
-            <div className="flex items-center gap-2">
-              <span
+        />
+
+        {feedback && (
+          <div
+            className={cn(
+              "text-xs px-3 py-1.5 rounded-md",
+              feedback.type === "success"
+                ? "bg-success/10 text-success"
+                : "bg-error/10 text-error",
+            )}
+          >
+            {feedback.message}
+          </div>
+        )}
+
+        <div className="flex justify-end gap-3">
+          {isAutoReply ? (
+            <>
+              <button
+                type="button"
+                disabled={isSaving || isRegenerating}
+                onClick={handleSave}
                 className={cn(
-                  "material-symbols-outlined text-[20px]",
-                  isAutoReply ? "text-success" : "text-primary",
+                  "px-4 py-2 border border-border text-primary rounded-lg text-xs font-medium transition-colors flex items-center gap-2",
+                  hasChanges && !isSaving
+                    ? "hover:bg-surface-secondary"
+                    : "opacity-50 cursor-not-allowed",
                 )}
               >
-                {isAutoReply ? "check_circle" : "auto_fix_high"}
-              </span>
-              <h2 className="text-lg font-semibold text-text-primary">
-                {isAutoReply ? "AI Sent Reply" : "Draft Reply"}
-              </h2>
-            </div>
-          </CardItem>
-
-          <textarea
-            value={draft}
-            onChange={(e) => {
-              setDraft(e.target.value);
-              if (!isEditing) setIsEditing(true);
-            }}
-            rows={6}
-            readOnly={isAutoReply || isSent}
-            placeholder={isEmpty ? "Write your reply here..." : undefined}
-            className={cn(
-              "w-full p-4 border border-border rounded-lg text-sm text-text-primary resize-none",
-              isAutoReply || isSent
-                ? "bg-surface-secondary cursor-default"
-                : "bg-surface-secondary focus:border-secondary focus:ring-1 focus:ring-secondary",
-              isEmpty && !isAutoReply && "placeholder:text-text-muted",
-            )}
-          />
-
-          {feedback && (
-            <div
-              className={cn(
-                "text-xs px-3 py-1.5 rounded-md",
-                feedback.type === "success"
-                  ? "bg-success/10 text-success"
-                  : "bg-error/10 text-error",
-              )}
-            >
-              {feedback.message}
-            </div>
-          )}
-
-          <div className="flex justify-end gap-3">
-            {isAutoReply ? (
-              <>
+                <span className="material-symbols-outlined text-[16px]">
+                  {isSaving ? "hourglass_empty" : "edit"}
+                </span>
+                {isSaving ? "Saving..." : "Save"}
+              </button>
+              {isSent ? (
                 <button
                   type="button"
-                  disabled={isSaving || isRegenerating}
-                  onClick={handleSave}
+                  disabled
+                  className="px-4 py-2 bg-success text-white rounded-lg text-xs font-medium opacity-50 cursor-not-allowed flex items-center gap-2"
+                >
+                  <span
+                    className="material-symbols-outlined text-[16px]"
+                    style={{ fontVariationSettings: "'FILL' 1" }}
+                  >
+                    send
+                  </span>
+                  Sent
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled={!draft.trim() || isSaving || isRegenerating || isSending}
+                  onClick={handleSend}
                   className={cn(
-                    "px-4 py-2 border border-border text-primary rounded-lg text-xs font-medium transition-colors flex items-center gap-2",
-                    hasChanges && !isSaving
-                      ? "hover:bg-surface-secondary"
-                      : "opacity-50 cursor-not-allowed",
+                    "px-4 py-2 rounded-lg text-xs font-medium transition-colors flex items-center gap-2",
+                    draft.trim() && !isSaving && !isRegenerating && !isSending
+                      ? "bg-primary text-white hover:bg-primary-dark"
+                      : "bg-surface-secondary text-text-muted cursor-not-allowed",
                   )}
                 >
-                  <span className="material-symbols-outlined text-[16px]">
-                    {isSaving ? "hourglass_empty" : "edit"}
+                  <span
+                    className="material-symbols-outlined text-[16px]"
+                    style={{ fontVariationSettings: "'FILL' 1" }}
+                  >
+                    {isSending ? "hourglass_empty" : "send"}
                   </span>
-                  {isSaving ? "Saving..." : "Save"}
+                  {isSending ? "Sending..." : "Send Reply"}
                 </button>
-                {isSent ? (
+              )}
+            </>
+          ) : (
+            <>
+              {isSent ? (
+                <button
+                  type="button"
+                  disabled
+                  className="px-4 py-2 bg-success text-white rounded-lg text-xs font-medium opacity-50 cursor-not-allowed flex items-center gap-2"
+                >
+                  <span
+                    className="material-symbols-outlined text-[16px]"
+                    style={{ fontVariationSettings: "'FILL' 1" }}
+                  >
+                    send
+                  </span>
+                  Sent
+                </button>
+              ) : (
+                <>
                   <button
                     type="button"
-                    disabled
-                    className="px-4 py-2 bg-success text-white rounded-lg text-xs font-medium opacity-50 cursor-not-allowed flex items-center gap-2"
+                    disabled={isRegenerating || isSaving}
+                    onClick={handleRegenerate}
+                    className={cn(
+                      "px-4 py-2 border border-border text-primary rounded-lg text-xs font-medium transition-colors flex items-center gap-2",
+                      !isRegenerating && !isSaving
+                        ? "hover:bg-surface-secondary"
+                        : "opacity-50 cursor-not-allowed",
+                    )}
                   >
                     <span
-                      className="material-symbols-outlined text-[16px]"
-                      style={{ fontVariationSettings: "'FILL' 1" }}
+                      className={cn(
+                        "material-symbols-outlined text-[16px]",
+                        isRegenerating && "animate-spin",
+                      )}
                     >
-                      send
+                      refresh
                     </span>
-                    Sent
+                    {isRegenerating ? "Regenerating..." : "Regenerate"}
                   </button>
-                ) : (
+                  {hasChanges && (
+                    <button
+                      type="button"
+                      disabled={isSaving}
+                      onClick={handleSave}
+                      className={cn(
+                        "px-4 py-2 border border-secondary text-secondary rounded-lg text-xs font-medium transition-colors flex items-center gap-2",
+                        !isSaving
+                          ? "hover:bg-secondary/10"
+                          : "opacity-50 cursor-not-allowed",
+                      )}
+                    >
+                      <span className="material-symbols-outlined text-[16px]">
+                        {isSaving ? "hourglass_empty" : "save"}
+                      </span>
+                      {isSaving ? "Saving..." : "Save Changes"}
+                    </button>
+                  )}
                   <button
                     type="button"
                     disabled={!draft.trim() || isSaving || isRegenerating || isSending}
@@ -224,91 +297,12 @@ export function DraftCard({ decisionId, draftText, action, emailStatus }: DraftC
                     </span>
                     {isSending ? "Sending..." : "Send Reply"}
                   </button>
-                )}
-              </>
-            ) : (
-              <>
-                {isSent ? (
-                  <button
-                    type="button"
-                    disabled
-                    className="px-4 py-2 bg-success text-white rounded-lg text-xs font-medium opacity-50 cursor-not-allowed flex items-center gap-2"
-                  >
-                    <span
-                      className="material-symbols-outlined text-[16px]"
-                      style={{ fontVariationSettings: "'FILL' 1" }}
-                    >
-                      send
-                    </span>
-                    Sent
-                  </button>
-                ) : (
-                  <>
-                    <button
-                      type="button"
-                      disabled={isRegenerating || isSaving}
-                      onClick={handleRegenerate}
-                      className={cn(
-                        "px-4 py-2 border border-border text-primary rounded-lg text-xs font-medium transition-colors flex items-center gap-2",
-                        !isRegenerating && !isSaving
-                          ? "hover:bg-surface-secondary"
-                          : "opacity-50 cursor-not-allowed",
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          "material-symbols-outlined text-[16px]",
-                          isRegenerating && "animate-spin",
-                        )}
-                      >
-                        refresh
-                      </span>
-                      {isRegenerating ? "Regenerating..." : "Regenerate"}
-                    </button>
-                    {hasChanges && (
-                      <button
-                        type="button"
-                        disabled={isSaving}
-                        onClick={handleSave}
-                        className={cn(
-                          "px-4 py-2 border border-secondary text-secondary rounded-lg text-xs font-medium transition-colors flex items-center gap-2",
-                          !isSaving
-                            ? "hover:bg-secondary/10"
-                            : "opacity-50 cursor-not-allowed",
-                        )}
-                      >
-                        <span className="material-symbols-outlined text-[16px]">
-                          {isSaving ? "hourglass_empty" : "save"}
-                        </span>
-                        {isSaving ? "Saving..." : "Save Changes"}
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      disabled={!draft.trim() || isSaving || isRegenerating || isSending}
-                      onClick={handleSend}
-                      className={cn(
-                        "px-4 py-2 rounded-lg text-xs font-medium transition-colors flex items-center gap-2",
-                        draft.trim() && !isSaving && !isRegenerating && !isSending
-                          ? "bg-primary text-white hover:bg-primary-dark"
-                          : "bg-surface-secondary text-text-muted cursor-not-allowed",
-                      )}
-                    >
-                      <span
-                        className="material-symbols-outlined text-[16px]"
-                        style={{ fontVariationSettings: "'FILL' 1" }}
-                      >
-                        {isSending ? "hourglass_empty" : "send"}
-                      </span>
-                      {isSending ? "Sending..." : "Send Reply"}
-                    </button>
-                  </>
-                )}
-              </>
-            )}
-          </div>
-        </CardItem>
-      </CardBody>
-    </CardContainer>
+                </>
+              )}
+            </>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

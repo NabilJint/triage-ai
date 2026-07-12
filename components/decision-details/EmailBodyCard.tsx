@@ -1,6 +1,6 @@
 "use client";
 
-import { CardContainer, CardBody, CardItem } from "@/components/ui/3d-card";
+import { Card, CardContent } from "@/components/ui/card";
 
 type EmailBodyCardProps = {
 	body: string;
@@ -8,19 +8,14 @@ type EmailBodyCardProps = {
 
 export function EmailBodyCard({ body }: EmailBodyCardProps) {
 	return (
-		<CardContainer containerClassName="py-0 w-full" className="w-full">
-			<CardBody className="w-full h-auto p-0 [transform-style:preserve-3d]">
-				<CardItem
-					translateZ={20}
-					className="w-full bg-surface border border-border rounded-xl p-6 shadow-card"
-				>
-					<div className="p-4 bg-surface-secondary rounded-lg border border-border">
-						<p className="whitespace-pre-wrap text-sm text-text-primary leading-relaxed">
-							{body}
-						</p>
-					</div>
-				</CardItem>
-			</CardBody>
-		</CardContainer>
+		<Card>
+			<CardContent className="p-6">
+				<div className="p-4 bg-surface-secondary rounded-lg border border-border">
+					<p className="whitespace-pre-wrap text-sm text-text-primary leading-relaxed">
+						{body}
+					</p>
+				</div>
+			</CardContent>
+		</Card>
 	);
 }

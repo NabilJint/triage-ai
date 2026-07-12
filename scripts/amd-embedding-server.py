@@ -8,13 +8,14 @@ sentence-transformers on AMD GPU (ROCm) and exposes it via cloudflared tunnel.
 Usage:
   1. Upload this script to your AMD AI Notebook
   2. Run: python amd-embedding-server.py
-  3. Copy the generated URL (starts with https://<random>.trycloudflare.com)
-  4. Set AMD_CLOUD_ENDPOINT=<url> and AMD_CLOUD_API_KEY=<your-secret> in .env.local
-  5. Set LLM_PROVIDER=gemma (or leave default)
+   3. Copy the generated URL (starts with https://<random>.trycloudflare.com)
+   4. Set AMD_CLOUD_ENDPOINT=<url>/embed and AMD_CLOUD_API_KEY=<key> in .env.local
+   5. Set LLM_PROVIDER=gemma (or leave default)
+   6. If cloudflared fails to install, set up manually or run locally without tunnel
 
 Requirements:
-  pip install sentence-transformers flask numpy
-  # cloudflared is auto-downloaded if missing
+  pip install sentence-transformers numpy
+  # cloudflared is auto-downloaded (optional — server runs without it)
 """
 
 import json
@@ -157,10 +158,39 @@ def install_cloudflared() -> str:
     dest = os.path.expanduser("~/.cloudflared/cloudflared")
     os.makedirs(os.path.dirname(dest), exist_ok=True)
 
+    import ssl
     import urllib.request
 
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+
     print(f"[AMD Embedding] Downloading cloudflared from {url}")
-    urllib.request.urlretrieve(url, dest)
+
+    for attempt in range(3):
+        try:
+            urllib.request.urlretrieve(url, dest, context=ctx)
+            break
+        except Exception as e:
+            print(f"[AMD Embedding] Download attempt {attempt + 1} failed: {e}")
+            if attempt < 2:
+                time.sleep(3)
+            else:
+                print("[AMD Embedding] Trying curl fallback...")
+                try:
+                    subprocess.run(
+                        ["curl", "-sL", "--insecure", url, "-o", dest],
+                        check=True, timeout=120,
+                    )
+                except Exception as e2:
+                    print(f"[AMD Embedding] curl also failed: {e2}")
+                    print(f"[AMD Embedding] Please install cloudflared manually:")
+                    print(f"  wget {url} -O {dest} && chmod +x {dest}")
+                    raise RuntimeError(
+                        "Could not download cloudflared. "
+                        "Install it manually, then re-run this script."
+                    )
+
     os.chmod(dest, 0o755)
 
     if sys.platform == "darwin":
@@ -197,7 +227,12 @@ def start_tunnel(port: int) -> str:
                 break
 
     if not url:
-        raise RuntimeError("Failed to get cloudflared tunnel URL")
+        print("[AMD Embedding] WARNING: Could not get cloudflared tunnel URL.")
+        print("[AMD Embedding] The server is still running locally.")
+        print("[AMD Embedding] To expose it, run in another terminal:")
+        print(f"    cloudflared tunnel --url http://127.0.0.1:{port}")
+        print()
+        return None
 
     print(f"\n{'='*60}")
     print(f"  AMD Embedding Server Ready!")

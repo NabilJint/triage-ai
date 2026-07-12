@@ -134,10 +134,12 @@ export const getTriageFeed = query({
 			connections.filter(Boolean).map((c) => [c!._id, c!]),
 		);
 
-		let enriched = decisions.map((d) => {
-			const email = emailMap.get(d.email_id);
+		let enriched = decisions
+			.filter((d) => emailMap.has(d.email_id))
+			.map((d) => {
+			const email = emailMap.get(d.email_id)!;
 			const esc = escalationMap.get(d._id);
-			const conn = email ? connectionMap.get(email.inbox_connection_id) : null;
+			const conn = connectionMap.get(email.inbox_connection_id);
 			const fromName = email?.from_name ?? email?.from_email ?? "";
 			const fromEmail = email?.from_email ?? "";
 			const subject = email?.subject ?? "";

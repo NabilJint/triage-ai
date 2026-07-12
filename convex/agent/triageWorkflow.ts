@@ -92,6 +92,23 @@ export const triageWorkflow = internalAction({
       );
       if (!emailData) throw new Error(`Email ${args.emailId} not found`);
 
+      // Skip if already processed (prevents duplicate triage from scheduler retries)
+      if (emailData.email.status !== "pending") {
+        return;
+      }
+
+      // Skip replies (Re: prefix means it's a response, not a new thread)
+      // This prevents feedback loops when auto-replying to our own inbox
+      const isReply = emailData.email.subject?.toLowerCase().startsWith("re:");
+      if (isReply) {
+        return;
+      }
+
+      // Skip self-sends (prevents infinite loop when connected inbox emails itself)
+      if (emailData.userEmail && emailData.email.from_email === emailData.userEmail) {
+        return;
+      }
+
       // Explicit AMD ROCm embedding step — runs before workflow for context
       let similarInteractions: {
         subject: string;
@@ -143,7 +160,7 @@ export const triageWorkflow = internalAction({
                   emailId: args.emailId,
                   hardware: "AMD Instinct GPU with ROCm",
                   model: "intfloat/e5-large-v2",
-                  provider: process.env.LLM_PROVIDER ?? "fireworks",
+                  provider: process.env.LLM_PROVIDER ?? "gemma",
                   similarCount: similar.length,
                 },
               });

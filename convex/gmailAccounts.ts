@@ -193,7 +193,13 @@ export const exchangeAndSetup = action({
       throw new Error("No refresh token available — re-authorization required");
     }
 
-    const watch = await doWatch(args.accessToken);
+    // Gmail watch is optional — fails gracefully if Pub/Sub topic isn't configured
+    let watch = { historyId: "", expiration: 0 };
+    try {
+      watch = await doWatch(args.accessToken);
+    } catch (watchErr) {
+      console.warn("[exchangeAndSetup] Gmail watch failed (non-fatal):", watchErr);
+    }
 
     if (existing) {
       await ctx.runMutation(internal._gmailHelpers.patchGmailAccount, {
@@ -322,6 +328,18 @@ export const syncGmailHistory = internalAction({
       try {
         const raw = await fetchMessage(freshToken, messageId);
         const parsed = parseGmailMessage(raw);
+
+        // Skip self-sends (prevent feedback loop)
+        if (account.gmail_email && parsed.from_email === account.gmail_email) {
+          console.log(`[gmail] Skipping self-send: ${parsed.from_email}`);
+          continue;
+        }
+
+        // Skip replies (Re: prefix) — not new threads
+        if (parsed.subject?.toLowerCase().startsWith("re:")) {
+          console.log(`[gmail] Skipping reply: ${parsed.subject}`);
+          continue;
+        }
 
         const emailId = await ctx.runMutation(
           internal.agent._helpers.ingestEmail,
@@ -475,9 +493,12 @@ export const sendReply = action({
     if (!decision) throw new Error("Decision not found");
 
     const { email, userId } = decision;
-    const threadId = email.thread_id ?? email.gmail_message_id;
+    const threadId = email.thread_id;
+
+    console.log(`[sendReply] emailId=${email._id}, thread_id=${email.thread_id}, gmail_message_id=${email.gmail_message_id}, from=${email.from_email}`);
 
     if (!threadId) {
+      console.warn(`[sendReply] No thread_id — cannot send threaded reply`);
       await ctx.runMutation(internal.agent._helpers.markEmailReplied, {
         emailId: email._id,
       });
@@ -495,15 +516,20 @@ export const sendReply = action({
 
     const token = await refreshAccessToken(account.refresh_token);
 
+    const message_id = email.gmail_message_id ?? `${threadId}@mail.gmail.com`;
+    const gmailEmail = account.gmail_email;
+
     const mimeMessage = [
+      `From: ${gmailEmail}`,
       `To: ${email.from_email}`,
       `Subject: Re: ${email.subject}`,
       "Content-Type: text/plain; charset=UTF-8",
-      `In-Reply-To: ${threadId}`,
-      `References: ${threadId}`,
+      `Message-ID: <${message_id}>`,
+      `In-Reply-To: <${message_id}>`,
+      `References: <${message_id}>`,
       "",
       args.draftText,
-    ].join("\n");
+    ].join("\r\n");
 
     const raw = Buffer.from(mimeMessage).toString("base64url");
 
@@ -521,6 +547,26 @@ export const sendReply = action({
 
     if (!res.ok) {
       const err = await res.text();
+      console.error(`[sendReply] Gmail API error: ${res.status} ${err}`);
+      console.error(`[sendReply] threadId=${threadId}, message_id=${message_id}, from=${email.from_email}`);
+
+      // Rate limit — schedule a retry after the delay Gmail specifies
+      if (res.status === 429) {
+        const retryAfter = res.headers.get("Retry-After");
+        const delayMs = retryAfter
+          ? Math.max(new Date(retryAfter).getTime() - Date.now(), 5000)
+          : 60000; // default 1 min
+
+        console.warn(`[sendReply] Rate limited — retrying in ${Math.round(delayMs / 1000)}s`);
+
+        await ctx.scheduler.runAfter(
+          delayMs,
+          api.gmailAccounts.sendReply,
+          { decisionId: args.decisionId, draftText: args.draftText },
+        );
+
+        return { success: false, rateLimited: true, retryScheduled: true };
+      }
       throw new Error(`Gmail send failed: ${res.status} ${err}`);
     }
 

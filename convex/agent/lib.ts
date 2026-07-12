@@ -1,4 +1,5 @@
-const GEMA_MODEL = process.env.FIREWORKS_MODEL ?? "accounts/fireworks/models/llama-v3p3-70b-instruct";
+const FIREWORKS_MODEL = process.env.FIREWORKS_MODEL ?? "accounts/fireworks/models/gpt-oss-120b";
+const GEMMA_GOOGLE_MODEL = process.env.GEMMA_GOOGLE_MODEL ?? "gemma-4-26b-a4b-it";
 const GEMINI_MODEL = "gemini-3.5-flash";
 
 type LLMProvider = "fireworks" | "gemini" | "gemma";
@@ -14,9 +15,73 @@ async function callGemma(
   system: string,
   user: string,
 ): Promise<{ text: string; modelUsed: string }> {
-  const apiKey = process.env.FIREWORKS_API_KEY;
-  if (!apiKey) {
-    throw new Error("Gemma 4 not configured: FIREWORKS_API_KEY is missing");
+  const fwKey = process.env.FIREWORKS_API_KEY;
+
+  // 1) Try Fireworks with FIREWORKS_MODEL
+  //    Default: gpt-oss-120b (works now on hackathon key)
+  //    Gemma 4 on Fireworks: set FIREWORKS_MODEL=accounts/fireworks/models/gemma-4-31b-it
+  //    after deploying at https://fireworks.ai/models/fireworks/gemma-4-31b-it
+  if (fwKey) {
+    try {
+      const res = await fetch(
+        "https://api.fireworks.ai/inference/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${fwKey}`,
+          },
+          body: JSON.stringify({
+            model: FIREWORKS_MODEL,
+            temperature: 0.3,
+            max_tokens: 1024,
+            messages: [
+              { role: "system", content: system },
+              { role: "user", content: user },
+            ],
+          }),
+        },
+      );
+
+      if (res.ok) {
+        const data = await res.json();
+        const text = data.choices?.[0]?.message?.content ?? "";
+        if (text) return { text, modelUsed: `fireworks/${FIREWORKS_MODEL}` };
+      }
+    } catch {
+      // Fireworks failed — try Google
+    }
+  }
+
+  // 2) Fallback: Google Gemma 4 (free via GOOGLE_API_KEY, same model)
+  const googleKey = process.env.GOOGLE_API_KEY;
+  if (googleKey) {
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${GEMMA_GOOGLE_MODEL}:generateContent?key=${googleKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: `${system}\n\n${user}` }] }],
+            generationConfig: { temperature: 0.3, maxOutputTokens: 2048 },
+          }),
+        },
+      );
+
+      if (res.ok) {
+        const data = await res.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+        if (text) return { text, modelUsed: `google/${GEMMA_GOOGLE_MODEL}` };
+      }
+    } catch {
+      // Google Gemma 4 failed — fall through to Fireworks default
+    }
+  }
+
+  // 3) Last resort: Fireworks gpt-oss-120b (always available on hackathon key)
+  if (!fwKey) {
+    throw new Error("No LLM available: set FIREWORKS_API_KEY or GOOGLE_API_KEY");
   }
 
   const res = await fetch(
@@ -25,10 +90,10 @@ async function callGemma(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${fwKey}`,
       },
       body: JSON.stringify({
-        model: GEMA_MODEL,
+        model: "accounts/fireworks/models/gpt-oss-120b",
         temperature: 0.3,
         max_tokens: 1024,
         messages: [
@@ -41,13 +106,13 @@ async function callGemma(
 
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(`Gemma 4 API error ${res.status}: ${body}`);
+    throw new Error(`Gemma 4 fallback API error ${res.status}: ${body}`);
   }
 
   const data = await res.json();
   return {
     text: data.choices?.[0]?.message?.content ?? "",
-    modelUsed: GEMA_MODEL,
+    modelUsed: "fireworks/gpt-oss-120b",
   };
 }
 
@@ -60,36 +125,41 @@ async function callFireworks(
     throw new Error("LLM not configured: FIREWORKS_API_KEY is missing");
   }
 
-  const res = await fetch(
-    "https://api.fireworks.ai/inference/v1/chat/completions",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: GEMA_MODEL,
-        temperature: 0.3,
-        max_tokens: 1024,
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: user },
-        ],
-      }),
-    },
-  );
+  const models = [FIREWORKS_MODEL, "accounts/fireworks/models/gpt-oss-120b"];
+  let lastError = "All models failed";
 
-  if (!res.ok) {
+  for (const model of models) {
+    const res = await fetch(
+      "https://api.fireworks.ai/inference/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model,
+          temperature: 0.3,
+          max_tokens: 1024,
+          messages: [
+            { role: "system", content: system },
+            { role: "user", content: user },
+          ],
+        }),
+      },
+    );
+
+    if (res.ok) {
+      const data = await res.json();
+      const text = data.choices?.[0]?.message?.content ?? "";
+      if (text) return { text, modelUsed: model };
+    }
+
     const body = await res.text();
-    throw new Error(`Fireworks API error ${res.status}: ${body}`);
+    lastError = `${model}: ${res.status} ${body.slice(0, 100)}`;
   }
 
-  const data = await res.json();
-  return {
-    text: data.choices?.[0]?.message?.content ?? "",
-    modelUsed: GEMA_MODEL,
-  };
+  throw new Error(`Fireworks API error — ${lastError}`);
 }
 
 async function callGemini(

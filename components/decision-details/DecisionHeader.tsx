@@ -5,8 +5,8 @@ import {
 	StatusBadge,
 	ConfidenceBar,
 } from "@/components/triage/StatusBadge";
+import { Card, CardContent } from "@/components/ui/card";
 import type { Classification } from "@/types";
-import { CardContainer, CardBody, CardItem } from "@/components/ui/3d-card";
 
 type DecisionHeaderProps = {
 	classification: Classification;
@@ -39,56 +39,49 @@ export function DecisionHeader({
 				Back to Triage Feed
 			</Link>
 
-			<CardContainer containerClassName="py-0 w-full" className="w-full">
-				<CardBody className="w-full h-auto p-0 [transform-style:preserve-3d]">
-					<CardItem
-						translateZ={20}
-						className="w-full bg-surface border border-border rounded-xl p-6 shadow-card"
-					>
-						<CardItem translateZ={30} className="w-full">
-							<div className="flex items-center gap-2 pb-3 border-b border-border">
-								<span className="material-symbols-outlined text-text-muted text-[20px]">
-									mail
-								</span>
-								<h2 className="text-lg font-semibold text-text-primary">
-									Original Request
-								</h2>
-							</div>
-						</CardItem>
+			<Card>
+				<CardContent className="p-6">
+					<div className="flex items-center gap-2 pb-3 border-b border-border">
+						<span className="material-symbols-outlined text-text-muted text-[20px]">
+							mail
+						</span>
+						<h2 className="text-lg font-semibold text-text-primary">
+							Original Request
+						</h2>
+					</div>
 
-						<div className="flex justify-between items-start">
-							<div>
-								<div className="text-xs font-medium text-text-muted uppercase tracking-wider mb-0.5">
-									From
-								</div>
-								<div className="text-sm font-semibold text-text-primary">
-									{fromName}
-								</div>
-								<div className="text-xs text-text-muted">{fromEmail}</div>
-							</div>
-							<div className="text-right">
-								<div className="text-xs font-medium text-text-muted uppercase tracking-wider mb-0.5">
-									Received
-								</div>
-								<div className="text-sm text-text-secondary">{receivedAt}</div>
-							</div>
-						</div>
-
+					<div className="flex justify-between items-start">
 						<div>
 							<div className="text-xs font-medium text-text-muted uppercase tracking-wider mb-0.5">
-								Subject
+								From
 							</div>
-							<div className="text-sm font-semibold text-text-primary">{subject}</div>
+							<div className="text-sm font-semibold text-text-primary">
+								{fromName}
+							</div>
+							<div className="text-xs text-text-muted">{fromEmail}</div>
 						</div>
+						<div className="text-right">
+							<div className="text-xs font-medium text-text-muted uppercase tracking-wider mb-0.5">
+								Received
+							</div>
+							<div className="text-sm text-text-secondary">{receivedAt}</div>
+						</div>
+					</div>
 
-						<div className="flex items-center gap-3 mt-1">
-							<StatusBadge type="classification" value={classification} />
-							<ConfidenceBar score={confidence} />
-							<StatusBadge type="action" value={action} />
+					<div>
+						<div className="text-xs font-medium text-text-muted uppercase tracking-wider mb-0.5">
+							Subject
 						</div>
-					</CardItem>
-				</CardBody>
-			</CardContainer>
+						<div className="text-sm font-semibold text-text-primary">{subject}</div>
+					</div>
+
+					<div className="flex items-center gap-3 mt-1">
+						<StatusBadge type="classification" value={classification} />
+						<ConfidenceBar score={confidence} />
+						<StatusBadge type="action" value={action} />
+					</div>
+				</CardContent>
+			</Card>
 		</div>
 	);
 }

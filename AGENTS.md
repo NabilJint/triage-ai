@@ -267,7 +267,9 @@ See `context/build-plan.md` for full details.
 | `CONVEX_DEPLOYMENT` | Convex deployment |
 | `FIREWORKS_API_KEY` | lib/fireworks.ts, lib/llm.ts |
 | `LLM_PROVIDER` | lib/llm.ts — `"gemma"` (default), `"fireworks"`, or `"gemini"` |
-| `FIREWORKS_MODEL` | lib/llm.ts, convex/agent/lib.ts — defaults to `accounts/fireworks/models/llama-v3p3-70b-instruct`; set to `accounts/fireworks/models/gemma-4-31b-it` when dedicated deployment is created |
+| `FIREWORKS_MODEL` | lib/llm.ts, convex/agent/lib.ts — defaults to `accounts/fireworks/models/gpt-oss-120b` (hackathon key); set to `accounts/fireworks/models/gemma-4-31b-it` when deployed on Fireworks |
+| `GEMMA_GOOGLE_MODEL` | convex/agent/lib.ts — Google API model for Gemma 4, defaults to `gemma-4-26b-a4b-it` |
+| `LLM_PROVIDER=gemma` | Routes to Google Gemma 4 API first, falls back to Fireworks `FIREWORKS_MODEL` gracefully |
 | `GOOGLE_API_KEY` | lib/llm.ts — used when `LLM_PROVIDER=gemini` |
 | `GOOGLE_CLIENT_ID` | Convex Auth |
 | `GOOGLE_CLIENT_SECRET` | Convex Auth |

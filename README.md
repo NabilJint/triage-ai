@@ -1,5 +1,9 @@
 # TriageAI
 
+<p align="center">
+  <img src="cover-image.png" alt="TriageAI — AI-Powered Email Triage for SMBs" width="100%">
+</p>
+
 **AI-Powered Customer Support Assistant**
 
 Built for the [AMD Developer Hackathon](https://notebooks.amd.com/hackathon) — *ACT II: Unicorn Track*.
@@ -10,9 +14,9 @@ TriageAI connects to your support inbox, automatically classifies every incoming
 
 ## Demo
 
-[![TriageAI Demo](https://img.youtube.com/vi/VIDEO_ID/0.jpg)](https://youtu.be/VIDEO_ID)
+[![TriageAI Demo](cover-image.png)](#)
 
-> Replace `VIDEO_ID` with your demo video link before submission.
+> Demo video link — update before final submission.
 
 ---
 

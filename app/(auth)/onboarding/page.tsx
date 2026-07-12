@@ -107,6 +107,7 @@ export default function OnboardingPage() {
   });
   const [completed, setCompleted] = useState(false);
   const [data, setData] = useState<OnboardingData>(defaultData);
+  const [gmailStatus, setGmailStatus] = useState<string | null>(null);
   const { profile, isLoading } = useAuthGuard();
   const updateBusinessContext = useMutation(api.userProfiles.updateBusinessContext);
   const saveReplyTone = useMutation(api.userProfiles.saveReplyTone);
@@ -137,12 +138,32 @@ export default function OnboardingPage() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.has("gmail")) {
+    const gmail = params.get("gmail");
+    if (gmail === "connected") {
+      setGmailStatus("Gmail inbox connected successfully!");
+      const url = new URL(window.location.href);
+      url.searchParams.delete("gmail");
+      router.replace(url.pathname + url.search);
+    } else if (gmail === "error") {
+      setGmailStatus("Failed to connect Gmail. Please try again.");
+      const url = new URL(window.location.href);
+      url.searchParams.delete("gmail");
+      router.replace(url.pathname + url.search);
+    } else if (gmail === "no_client") {
+      setGmailStatus("Gmail API not configured. Use IMAP instead.");
+      const url = new URL(window.location.href);
+      url.searchParams.delete("gmail");
+      router.replace(url.pathname + url.search);
+    } else if (params.has("gmail")) {
       const url = new URL(window.location.href);
       url.searchParams.delete("gmail");
       router.replace(url.pathname + url.search);
     }
-  }, [router, gmailConnected]);
+  }, [router]);
+
+  if (completed) {
+    return <CompletedScreen data={data} gmailConnected={gmailConnected} />;
+  }
 
   if (isLoading || (profile && profile.business_name)) {
     return <LoadingScreen text="Loading onboarding..." />;
@@ -211,10 +232,6 @@ export default function OnboardingPage() {
     setData((prev) => ({ ...prev, ...partial }));
   };
 
-  if (completed) {
-    return       <CompletedScreen data={data} gmailConnected={gmailConnected} />;
-  }
-
   const steps = [
     <StepWelcome key="welcome" onNext={handleNext} />,
     <StepConnectInbox
@@ -223,6 +240,7 @@ export default function OnboardingPage() {
       onBack={handleBack}
       gmailConnected={gmailConnected}
       connectedEmail={connectedEmail}
+      gmailStatus={gmailStatus}
       onToggleGmail={() => {
         if (gmailConnected) {
           disconnect();

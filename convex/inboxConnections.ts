@@ -48,6 +48,8 @@ export const connectGmail = mutation({
       expires_in: v.optional(v.number()),
       scope: v.optional(v.string()),
       token_type: v.optional(v.string()),
+      id_token: v.optional(v.string()),
+      refresh_token_expires_in: v.optional(v.number()),
     }),
   },
   handler: async (ctx, args) => {
@@ -61,10 +63,21 @@ export const connectGmail = mutation({
       .first();
 
     const now = new Date().toISOString();
+    const credentials: Record<string, unknown> = {
+      access_token: args.credentials.access_token,
+      refresh_token: args.credentials.refresh_token,
+      token_type: args.credentials.token_type,
+      scope: args.credentials.scope,
+      expires_in: args.credentials.expires_in,
+    };
+
     const patch = {
       provider: "gmail" as const,
+      credentials,
       is_active: true,
       connected_at: now,
+      last_error: undefined as string | undefined,
+      error_at: undefined as string | undefined,
     };
 
     if (existing) {

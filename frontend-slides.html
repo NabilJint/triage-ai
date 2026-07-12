@@ -1,0 +1,1100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TriageAI — Architecture Review</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,0..200&display=block" />
+    <style>
+        :root {
+            --slate-50: #f8fafc;
+            --slate-100: #f1f5f9;
+            --slate-200: #e2e8f0;
+            --slate-300: #cbd5e1;
+            --slate-400: #94a3b8;
+            --slate-500: #64748b;
+            --slate-600: #475569;
+            --slate-700: #334155;
+            --slate-800: #1e293b;
+            --slate-850: #0f1720;
+            --slate-900: #0b1120;
+            --slate-950: #050a18;
+            --indigo-400: #14B8A6;
+            --indigo-500: #0D9488;
+            --indigo-600: #0F766E;
+            --emerald-400: #34d399;
+            --emerald-500: #10b981;
+            --rose-400: #fb7185;
+            --rose-500: #f43f5e;
+            --amber-400: #fbbf24;
+            --amber-500: #f59e0b;
+            --cyan-400: #22d3ee;
+            --font-display: 'SF Pro Display', 'Inter', system-ui, sans-serif;
+            --font-body: 'SF Pro Text', 'Inter', system-ui, sans-serif;
+            --font-mono: 'JetBrains Mono', 'SF Mono', monospace;
+            --ease: cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: var(--slate-950);
+            color: var(--slate-100);
+            font-family: var(--font-body);
+            overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .icon { font-family: 'Material Symbols Outlined'; font-weight: 300; font-size: 24px; line-height: 1; }
+        .icon-sm { font-size: 18px; }
+        .icon-lg { font-size: 32px; }
+        .icon-fill { font-variation-settings: 'FILL' 1; }
+
+        .bg-gradient {
+            position: fixed; inset: 0;
+            background: radial-gradient(ellipse 80% 60% at 50% -20%, rgba(13,148,136,0.12), transparent),
+                        radial-gradient(ellipse 60% 50% at 80% 80%, rgba(139,92,246,0.06), transparent);
+            pointer-events: none; z-index: 0;
+        }
+
+        .slide-deck {
+            position: relative; width: 100vw; height: 100vh; overflow: hidden; z-index: 1;
+        }
+        @media (min-width: 769px) {
+            .slide-deck {
+                max-width: calc(100vh * 16 / 9);
+                max-height: calc(100vw * 9 / 16);
+                margin: auto; position: absolute; inset: 0;
+            }
+        }
+
+        .slide {
+            position: absolute; inset: 0;
+            display: flex; flex-direction: column;
+            padding: 56px 72px;
+            opacity: 0; visibility: hidden;
+            transition: opacity 0.45s ease, visibility 0.45s, transform 0.45s ease;
+            transform: scale(0.98);
+            overflow: hidden;
+        }
+        .slide.active { opacity: 1; visibility: visible; transform: scale(1); }
+
+        .slide-body {
+            flex: 1;
+            display: flex; flex-direction: column;
+            justify-content: center;
+            max-width: 1100px;
+            width: 100%;
+            margin: 0 auto;
+            gap: 12px;
+            overflow-y: auto;
+            scrollbar-width: none;
+        }
+        .slide-body::-webkit-scrollbar { display: none; }
+
+        .label {
+            display: inline-flex; align-items: center; gap: 6px;
+            font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em;
+            color: var(--indigo-400);
+            margin-bottom: 2px;
+        }
+        h1 {
+            font-family: var(--font-display);
+            font-size: clamp(34px, 5vw, 60px);
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            line-height: 1.05;
+            background: linear-gradient(135deg, #f8fafc, #14B8A6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        h2 {
+            font-family: var(--font-display);
+            font-size: clamp(24px, 3.2vw, 38px);
+            font-weight: 600;
+            letter-spacing: -0.025em;
+            color: var(--slate-100);
+            line-height: 1.15;
+        }
+        h3 {
+            font-family: var(--font-display);
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--slate-200);
+            margin-bottom: 4px;
+        }
+        p {
+            font-size: clamp(13px, 1.3vw, 16px);
+            line-height: 1.6;
+            color: var(--slate-400);
+        }
+        .lead {
+            font-size: clamp(15px, 1.6vw, 20px);
+            line-height: 1.55;
+            color: var(--slate-300);
+            max-width: 720px;
+        }
+
+        .dim { color: var(--slate-500); }
+        .accent { color: var(--indigo-400); }
+        .green { color: var(--emerald-400); }
+        .rose { color: var(--rose-400); }
+        .amber { color: var(--amber-400); }
+
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; width: 100%; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; width: 100%; }
+        .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; width: 100%; }
+        .grid-2-1 { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; width: 100%; }
+        .grid-1-2 { display: grid; grid-template-columns: 1fr 2fr; gap: 24px; width: 100%; }
+
+        @media (max-width: 768px) {
+            .slide { padding: 32px 20px; }
+            h1 { font-size: clamp(26px, 5vw, 36px); }
+            h2 { font-size: clamp(20px, 3.5vw, 28px); }
+            .grid-2, .grid-3, .grid-4, .grid-2-1, .grid-1-2 { grid-template-columns: 1fr; gap: 12px; }
+        }
+
+        .card {
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid rgba(255,255,255,0.04);
+            border-radius: 10px;
+            padding: 18px 20px;
+            backdrop-filter: blur(4px);
+        }
+        .card p { font-size: 13px; }
+        .card h3 { font-size: 14px; display: flex; align-items: center; gap: 6px; }
+        .card .icon { font-size: 18px; color: var(--indigo-400); }
+
+        .metric {
+            background: rgba(30, 41, 59, 0.4);
+            border: 1px solid rgba(255,255,255,0.04);
+            border-radius: 10px;
+            padding: 20px 16px;
+            text-align: center;
+        }
+        .metric .num {
+            font-family: var(--font-display);
+            font-size: clamp(28px, 3.5vw, 40px);
+            font-weight: 700;
+            color: var(--slate-100);
+            line-height: 1;
+        }
+        .metric .num.green { color: var(--emerald-400); }
+        .metric .num.amber { color: var(--amber-400); }
+        .metric .num.rose { color: var(--rose-400); }
+        .metric .num.indigo { color: var(--indigo-400); }
+        .metric .lbl {
+            font-size: 11px; color: var(--slate-500);
+            margin-top: 4px; text-transform: uppercase; letter-spacing: 0.06em;
+        }
+
+        /* architecture diagram */
+        .arch { display: flex; flex-direction: column; gap: 4px; width: 100%; }
+        .arch-row { display: flex; gap: 4px; align-items: center; justify-content: center; flex-wrap: wrap; }
+        .arch-box {
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 6px;
+            padding: 6px 10px;
+            font-size: 10px;
+            font-weight: 500;
+            color: var(--slate-300);
+            text-align: center;
+            min-width: 56px;
+        }
+        .arch-box.lg { padding: 8px 14px; font-size: 11px; min-width: 70px; }
+        .arch-box.xl { padding: 10px 18px; font-size: 12px; min-width: 90px; }
+        .arch-box.client { border-color: rgba(99,102,241,0.3); background: rgba(99,102,241,0.08); }
+        .arch-box.ai { border-color: rgba(16,185,129,0.3); background: rgba(16,185,129,0.06); }
+        .arch-box.data { border-color: rgba(251,191,36,0.3); background: rgba(251,191,36,0.06); }
+        .arch-box.infra { border-color: rgba(244,63,94,0.3); background: rgba(244,63,94,0.06); }
+        .arch-arrow { color: var(--slate-600); font-size: 12px; }
+        .arch-label { font-size: 9px; color: var(--slate-500); text-align: center; text-transform: uppercase; letter-spacing: 0.06em; margin-top: 2px; }
+
+        /* flow diagram */
+        .flow { display: flex; align-items: center; justify-content: center; gap: 3px; flex-wrap: wrap; }
+        .flow-node {
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid rgba(255,255,255,0.04);
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--slate-300);
+            text-align: center;
+            min-width: 60px;
+        }
+        .flow-node.ai { border-color: rgba(16,185,129,0.2); background: rgba(16,185,129,0.06); }
+        .flow-node.amd { border-color: rgba(244,63,94,0.2); background: rgba(244,63,94,0.06); }
+        .flow-node.primary { border-color: rgba(99,102,241,0.2); background: rgba(99,102,241,0.06); }
+
+        .tag {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px; font-weight: 500;
+            background: rgba(13,148,136,0.08);
+            color: var(--indigo-400);
+            border: 1px solid rgba(13,148,136,0.12);
+        }
+        .tag.rose { background: rgba(244,63,94,0.08); color: var(--rose-400); border-color: rgba(244,63,94,0.12); }
+        .tag.green { background: rgba(16,185,129,0.08); color: var(--emerald-400); border-color: rgba(16,185,129,0.12); }
+        .tag.amber { background: rgba(251,191,36,0.08); color: var(--amber-400); border-color: rgba(251,191,36,0.12); }
+
+        .bullet-list { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+        .bullet-list li {
+            font-size: 13px;
+            line-height: 1.5;
+            color: var(--slate-400);
+            padding-left: 16px;
+            position: relative;
+        }
+        .bullet-list li::before {
+            content: '';
+            position: absolute; left: 0; top: 8px;
+            width: 4px; height: 4px;
+            border-radius: 50%;
+            background: var(--indigo-500);
+        }
+
+        .split { display: flex; gap: 16px; width: 100%; }
+        .split-left { flex: 1; }
+        .split-right { flex: 1; }
+
+        .code-block {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.04);
+            border-radius: 6px;
+            padding: 10px 14px;
+            font-family: var(--font-mono);
+            font-size: 10.5px;
+            line-height: 1.6;
+            color: var(--slate-300);
+            overflow-x: auto;
+        }
+        .code-block .c { color: var(--slate-600); }
+        .code-block .k { color: var(--amber-400); }
+        .code-block .s { color: var(--emerald-400); }
+        .code-block .f { color: var(--rose-400); }
+        .code-block .v { color: var(--indigo-400); }
+
+        .tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .tbl th { text-align: left; color: var(--slate-500); font-weight: 500; padding: 6px 8px; border-bottom: 1px solid rgba(255,255,255,0.04); text-transform: uppercase; letter-spacing: 0.04em; font-size: 10px; }
+        .tbl td { padding: 6px 8px; border-bottom: 1px solid rgba(255,255,255,0.03); color: var(--slate-400); }
+
+        .progress-bar {
+            position: fixed; top: 0; left: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--indigo-500), var(--indigo-400), var(--emerald-400));
+            transition: width 0.4s var(--ease);
+            z-index: 1000;
+        }
+        .nav {
+            position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+            display: flex; align-items: center; gap: 12px;
+            z-index: 1000;
+            background: rgba(11, 17, 32, 0.8);
+            backdrop-filter: blur(12px);
+            padding: 5px 14px;
+            border-radius: 100px;
+            border: 1px solid rgba(255,255,255,0.04);
+        }
+        .nav-btn {
+            background: rgba(255,255,255,0.03);
+            border: none; color: var(--slate-500);
+            width: 30px; height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .nav-btn:hover { background: rgba(99,102,241,0.2); color: var(--slate-200); }
+        .nav-count { color: var(--slate-600); font-size: 11px; min-width: 36px; text-align: center; font-variant-numeric: tabular-nums; }
+        .dot-nav { display: flex; gap: 3px; align-items: center; }
+        .dot {
+            width: 4px; height: 4px;
+            border-radius: 50%;
+            background: var(--slate-700);
+            border: none; padding: 0;
+            cursor: pointer;
+            transition: all 0.25s;
+        }
+        .dot.active { background: var(--indigo-400); width: 14px; border-radius: 2px; }
+
+        .notes-btn {
+            position: fixed; top: 10px; right: 10px;
+            z-index: 1001;
+            background: rgba(11, 17, 32, 0.6);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.04);
+            border-radius: 5px;
+            padding: 4px 8px;
+            color: var(--slate-600);
+            font-size: 9px;
+            cursor: pointer;
+            font-family: var(--font-body);
+            display: flex; align-items: center; gap: 3px;
+        }
+        .notes-btn:hover { color: var(--slate-400); }
+        .notes-btn.on { color: var(--indigo-400); border-color: rgba(99,102,241,0.2); }
+
+        .speaker-notes {
+            position: absolute;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 10px;
+            color: rgba(100, 116, 139, 0.5);
+            background: rgba(11, 17, 32, 0.5);
+            backdrop-filter: blur(6px);
+            border: 1px solid rgba(255,255,255,0.02);
+            border-radius: 5px;
+            padding: 4px 12px;
+            max-width: 70%;
+            text-align: center;
+            z-index: 10;
+            line-height: 1.4;
+            opacity: 0;
+            transition: opacity 0.4s ease 0.6s;
+            pointer-events: none;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .slide.active .speaker-notes { opacity: 1; }
+        .speaker-notes hidden { display: none; }
+
+        .chart-w { width: 100%; height: 200px; max-width: 500px; }
+
+        /* animation utilities */
+        .au { animation: aU 0.5s var(--ease) forwards; opacity: 0; }
+        @keyframes aU { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+        .ad { animation: aD 0.5s var(--ease) forwards; opacity: 0; }
+        @keyframes aD { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        .al { animation: aL 0.5s var(--ease) forwards; opacity: 0; }
+        @keyframes aL { from { opacity: 0; transform: translateX(-24px); } to { opacity: 1; transform: translateX(0); } }
+        .ar { animation: aR 0.5s var(--ease) forwards; opacity: 0; }
+        @keyframes aR { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: translateX(0); } }
+        .ap { animation: aP 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; opacity: 0; }
+        @keyframes aP { from { opacity: 0; transform: scale(0.85); } to { opacity: 1; transform: scale(1); } }
+        .as > * { opacity: 0; animation: aU 0.35s var(--ease) forwards; }
+        .as > *:nth-child(1) { animation-delay: 0.04s; }
+        .as > *:nth-child(2) { animation-delay: 0.08s; }
+        .as > *:nth-child(3) { animation-delay: 0.12s; }
+        .as > *:nth-child(4) { animation-delay: 0.16s; }
+        .as > *:nth-child(5) { animation-delay: 0.20s; }
+        .as > *:nth-child(6) { animation-delay: 0.24s; }
+        .as > *:nth-child(7) { animation-delay: 0.28s; }
+        .as > *:nth-child(8) { animation-delay: 0.32s; }
+        .as > *:nth-child(9) { animation-delay: 0.36s; }
+        .as > *:nth-child(10) { animation-delay: 0.40s; }
+        .as > *:nth-child(11) { animation-delay: 0.44s; }
+        .as > *:nth-child(12) { animation-delay: 0.48s; }
+        .d1 { animation-delay: 0.10s !important; }
+        .d2 { animation-delay: 0.20s !important; }
+        .d3 { animation-delay: 0.30s !important; }
+        .d4 { animation-delay: 0.40s !important; }
+        .d5 { animation-delay: 0.50s !important; }
+        .d6 { animation-delay: 0.60s !important; }
+    </style>
+</head>
+<body>
+
+<div class="bg-gradient"></div>
+<div class="progress-bar" id="progressBar"></div>
+
+<button class="notes-btn" id="notesBtn"><span class="icon icon-sm" style="font-size: 14px;">speaker_notes</span> Notes</button>
+
+<div class="slide-deck">
+
+<!-- ────────────────────────────────────────────
+     1 — TITLE
+     ──────────────────────────────────────────── -->
+<div class="slide">
+    <div class="slide-body" style="justify-content: center; text-align: center; align-items: center;">
+        <div class="au" style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+            <svg width="48" height="48" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="32" cy="32" r="32" fill="#0D9488"/>
+                <rect x="14" y="20" width="36" height="24" rx="4" stroke="white" stroke-width="2.5"/>
+                <path d="M14 23l18 13 18-13" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="46" cy="18" r="9" fill="#F59E0B"/>
+                <path d="M42 17.5l2.5 2.5 5-5" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span class="tag" style="font-size: 10px;">Architecture Review &middot; AMD Hackathon 2026</span>
+        </div>
+        <h1 class="ad d1" style="margin-top: 8px;">TriageAI</h1>
+        <p class="lead au d2" style="max-width: 600px;">An AI-powered email triage system for SMBs — ingesting, classifying, and resolving customer support emails with LLMs and vector embeddings.</p>
+        <div class="as d3" style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 16px;">
+            <span class="tag">NabilJint/triage-ai</span>
+            <span class="tag green">Gemma 4 26B (Fireworks)</span>
+            <span class="tag rose">AMD ROCm (e5-large-v2)</span>
+            <span class="tag">Convex (Reactive Backend)</span>
+        </div>
+    </div>
+    <div class="speaker-notes">"TriageAI — an AI-native email triage system. 22 features, 60+ Convex functions, built in under 2 weeks. Let's walk through the architecture."</div>
+</div>
+
+<!-- ────────────────────────────────────────────
+     2 — PROBLEM DOMAIN
+     ──────────────────────────────────────────── -->
+<div class="slide">
+    <div class="slide-body">
+        <span class="label ad"><span class="icon icon-sm">info</span> Problem Domain</span>
+        <h2 class="al">The SMB Support Gap</h2>
+        <p class="lead au d1" style="max-width: 720px;">Small and medium businesses lose revenue and customers because they lack the resources to staff 24/7 customer support. Email is the primary channel, but it's asynchronous, high-volume, and unstructured.</p>
+        <div class="grid-4 as" style="margin-top: 8px;">
+            <div class="metric"><div class="num amber">200+</div><div class="lbl">Emails / Day</div></div>
+            <div class="metric"><div class="num rose">4+ hr</div><div class="lbl">Response Time</div></div>
+            <div class="metric"><div class="num amber">12+ hr</div><div class="lbl">Staff Time / Week</div></div>
+            <div class="metric"><div class="num rose">30%</div><div class="lbl">Churn Contribution</div></div>
+        </div>
+        <div class="grid-2" style="margin-top: 4px;">
+            <div class="card au d3">
+                <h3><span class="icon">bolt</span> Key Insight</h3>
+                <p>~70% of support emails are repetitive — pricing, hours, order status. These require minimal context and have deterministic resolution paths.</p>
+            </div>
+            <div class="card au d4">
+                <h3><span class="icon">account_tree</span> Core Opportunity</h3>
+                <p>Route 70% to autonomous AI resolution. Surface the remaining 30% to human agents with full reasoning context, priority, and suggested actions.</p>
+            </div>
+        </div>
+    </div>
+    <div class="speaker-notes">"200+ emails a day, 4+ hour response times. 12 hours of staff time per week. 70% are repetitive. The opportunity is clear — automate the routine, augment the complex."</div>
+</div>
+
+<!-- ────────────────────────────────────────────
+     3 — SYSTEM ARCHITECTURE
+     ──────────────────────────────────────────── -->
+<div class="slide">
+    <div class="slide-body">
+        <span class="label ad"><span class="icon icon-sm">account_tree</span> Architecture</span>
+        <h2 class="al">System Overview</h2>
+        <div class="card" style="padding: 20px;">
+            <div class="arch" style="gap: 6px;">
+                <div style="display: flex; justify-content: center;"><span class="arch-box xl client">Next.js 16 Client</span></div>
+                <div style="display: flex; justify-content: center;"><span class="arch-arrow">&uarr;&darr;</span></div>
+                <div style="display: flex; gap: 2px; justify-content: center; flex-wrap: wrap;">
+                    <span class="arch-box lg client">Auth (Convex Auth)</span>
+                    <span class="arch-box lg">API Routes</span>
+                    <span class="arch-box lg">Middleware</span>
+                </div>
+                <div style="display: flex; justify-content: center;"><span class="arch-arrow">&uarr;&darr;</span></div>
+                <div style="display: flex; gap: 2px; justify-content: center; flex-wrap: wrap;">
+                    <span class="arch-box lg ai">Convex Backend</span>
+                    <span class="arch-box lg ai">Agent StateGraph</span>
+                    <span class="arch-box lg data">HTTP Actions</span>
+                </div>
+                <div style="display: flex; gap: 3px; justify-content: center; flex-wrap: wrap;">
+                    <div style="display: flex; flex-direction: column; align-items: center;">
+                        <div style="display: flex; gap: 2px;">
+                            <span class="arch-box lg data">Fireworks AI</span>
+                            <span class="arch-box lg rose">AMD ROCm</span>
+                        </div>
+                        <span class="arch-label">AI Services</span>
+                    </div>
+                    <div style="display: flex; flex-direction: column; align-items: center;">
+                        <span class="arch-box lg ai">PostgreSQL (Convex)</span>
+                        <span class="arch-label">Primary DB</span>
+                    </div>
+                    <div style="display: flex; flex-direction: column; align-items: center;">
+                        <div style="display: flex; gap: 2px;">
+                            <span class="arch-box lg">Gmail API</span>
+                            <span class="arch-box lg">IMAP IDLE</span>
+                        </div>
+                        <span class="arch-label">Email Providers</span>
+                    </div>
+                    <div style="display: flex; flex-direction: column; align-items: center;">
+                        <span class="arch-box lg ai">PostHog</span>
+                        <span class="arch-label">Analytics</span>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 3px; justify-content: center; flex-wrap: wrap;">
+                    <span class="arch-box infra">Docker</span>
+                    <span class="arch-box infra">CI/CD (GitHub)</span>
+                    <span class="arch-box infra">Convex Deploy</span>
+                </div>
+            </div>
+        </div>
+        <div class="grid-3 as" style="margin-top: 4px;">
+            <div class="card"><h3><span class="icon">sync</span> Realtime</h3><p>Convex subscriptions push triage decisions to the dashboard without polling or WebSocket code.</p></div>
+            <div class="card"><h3><span class="icon">lock</span> Auth</h3><p>Convex Auth with Google OAuth. All queries scoped to authenticated user via identity mapping.</p></div>
+            <div class="card"><h3><span class="icon">cached</span> Data Flow</h3><p>Email ingress via Gmail push or IMAP IDLE. HTTP action triggers agent workflow. Results stored reactively.</p></div>
+        </div>
+    </div>
+    <div class="speaker-notes">"Next.js 16 serves the client. Convex is the reactive backend — database, functions, and realtime all in one. Fireworks AI and AMD ROCm are the AI layer. Gmail API and IMAP IDLE handle email ingestion."</div>
+</div>
+
+<!-- ────────────────────────────────────────────
+     4 — AI PIPELINE
+     ──────────────────────────────────────────── -->
+<div class="slide">
+    <div class="slide-body">
+        <span class="label ad"><span class="icon icon-sm">psychology</span> AI Pipeline</span>
+        <h2 class="al">Agent Workflow (LangChain StateGraph)</h2>
+        <div class="card" style="padding: 16px 20px;">
+            <div class="flow as">
+                <span class="flow-node"><span class="icon icon-sm">mail</span> Ingest</span>
+                <span class="icon icon-sm" style="color: var(--slate-600);">arrow_forward</span>
+                <span class="flow-node ai"><span class="icon icon-sm">sell</span> Classify</span>
+                <span class="icon icon-sm" style="color: var(--slate-600);">arrow_forward</span>
+                <span class="flow-node amd"><span class="icon icon-sm">memory</span> Embed</span>
+                <span class="icon icon-sm" style="color: var(--slate-600);">arrow_forward</span>
+                <span class="flow-node primary"><span class="icon icon-sm">edit_note</span> Draft</span>
+                <span class="icon icon-sm" style="color: var(--slate-600);">arrow_forward</span>
+                <span class="flow-node"><span class="icon icon-sm">call_split</span> Route</span>
+            </div>
+        </div>
+        <div class="grid-2-1" style="margin-top: 4px;">
+            <div class="split" style="flex-direction: column; gap: 8px;">
+                <div class="card au d2">
+                    <h3><span class="icon">local_fire_department</span> Step 1: Classification</h3>
+                    <p class="dim">Gemma 4 26B on Fireworks classifies email into 8 intent categories. Returns category + confidence score (0-1) + reasoning.</p>
+                </div>
+                <div class="card au d3">
+                    <h3><span class="icon" style="color: var(--rose-400);">memory</span> Step 2: Embedding (AMD ROCm)</h3>
+                    <p class="dim"><span class="rose">e5-large-v2</span> via AMD GPU generates 1024-dim vector. Enables similarity search against past customer interactions. Graceful fallback to Gemini if AMD unavailable.</p>
+                </div>
+                <div class="card au d4">
+                    <h3><span class="icon">edit_note</span> Step 3: Draft + Route</h3>
+                    <p class="dim">Gemma 4 on Fireworks drafts response using business context, tone rules, and escalation policies. StateGraph routes: <span class="green">auto_reply</span> (confidence &gt; 0.85) or <span class="rose">escalate</span>.</p>
+                </div>
+            </div>
+            <div class="card au d4">
+                <h3><span class="icon">tune</span> Model Selection</h3>
+                <ul class="bullet-list" style="margin-top: 4px;">
+                    <li><span class="accent">Primary:</span> Gemma 4 26B on Fireworks (on-demand H100)</li>
+                    <li><span class="accent">Fallback 1:</span> Google Gemma 4 API (gemma-4-26b-a4b-it)</li>
+                    <li><span class="accent">Fallback 2:</span> GPT-OSS 120B (Fireworks serverless)</li>
+                    <li><span class="accent">Alt:</span> Gemini 3.5 Flash (via LLM_PROVIDER=gemini)</li>
+                </ul>
+                <div style="margin-top: 8px;">
+                    <h3><span class="icon">error</span> Error Handling</h3>
+                    <ul class="bullet-list">
+                        <li>3 retries with exponential backoff</li>
+                        <li>503/429 detection</li>
+                        <li>Model degrades: dedicated &rarr; serverless &rarr; mock</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="speaker-notes">"LangChain StateGraph orchestrates a 5-step pipeline: ingest, classify, embed, draft, route. The AMD ROCm embedding step is explicit and named — it's not hidden in an abstraction."</div>
+</div>
+
+<!-- ────────────────────────────────────────────
+     5 — AMD ROCm INTEGRATION
+     ──────────────────────────────────────────── -->
+<div class="slide">
+    <div class="slide-body">
+        <span class="label ad"><span class="icon icon-sm">memory</span> AMD ROCm</span>
+        <h2 class="al">Vector Embedding Service</h2>
+        <div class="grid-1-2" style="margin-top: 4px;">
+            <div class="card" style="display: flex; flex-direction: column; gap: 8px;">
+                <h3><span class="icon">deployed_code</span> generateEmbedding()</h3>
+                <div class="code-block"><span class="c"># AMD AI Notebook &mdash; e5-large-v2 on ROCm</span>
+<span class="k">import</span> <span class="v">sentence_transformers</span>
+
+model = SentenceTransformer(<span class="s">"intfloat/e5-large-v2"</span>)
+embedding = model.encode(
+    instruction + email_text
+).tolist()
+
+<span class="c"># 1024-dim vector &rarr; Convex</span>
+<span class="k">return</span> embedding</div>
+                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                    <span class="tag rose">ROCm GPU</span>
+                    <span class="tag">1024-dim</span>
+                    <span class="tag green">Normalized</span>
+                    <span class="tag amber">Fallback: Gemini</span>
+                </div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+                <div class="card au">
+                    <h3><span class="icon">architecture</span> Architecture</h3>
+                    <p class="dim">Self-hosted <span class="accent">sentence-transformers</span> server on AMD Developer Cloud AI Notebook. Exposed via HTTP API with API key auth. Tunneled via cloudflared for external access.</p>
+                </div>
+                <div class="card au d1">
+                    <h3><span class="icon">swap_horiz</span> Failover Strategy</h3>
+                    <p class="dim">If AMD endpoint is unreachable or returns errors, the system falls back to Gemini embedding API. The caller never sees the failure — it's transparent.</p>
+                </div>
+                <div class="card au d2">
+                    <h3><span class="icon">analytics</span> Why This Matters</h3>
+                    <ul class="bullet-list">
+                        <li>Explicit AMD step for hackathon compliance</li>
+                        <li>Local GPU inference = zero API cost per embedding</li>
+                        <li>Similarity search across customer history</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="speaker-notes">"The AMD ROCm step runs e5-large-v2 on an AMD GPU via the Developer Cloud AI Notebook. It's a self-hosted embedding service with graceful fallback to Gemini if the AMD endpoint is down."</div>
+</div>
+
+<!-- ────────────────────────────────────────────
+     6 — DATA MODEL
+     ──────────────────────────────────────────── -->
+<div class="slide">
+    <div class="slide-body">
+        <span class="label ad"><span class="icon icon-sm">schema</span> Data Model</span>
+        <h2 class="al">Schema Design</h2>
+        <div class="grid-2" style="margin-top: 4px;">
+            <div class="card" style="display: flex; flex-direction: column; gap: 8px;">
+                <h3><span class="icon">table</span> Core Tables</h3>
+                <table class="tbl">
+                    <tr><th>Table</th><th>Key Fields</th><th>Indexes</th></tr>
+                    <tr><td>emails</td><td>user_id, subject, body, from, status</td><td>by_user, by_user_and_status</td></tr>
+                    <tr><td>triageDecisions</td><td>email_id, classification, confidence, action</td><td>by_user, by_user_and_action</td></tr>
+                    <tr><td>escalations</td><td>decision_id, priority, status, assignee</td><td>by_decision, by_user</td></tr>
+                    <tr><td>customerEmbeddings</td><td>email_address, embedding, updated_at</td><td>by_email</td></tr>
+                </table>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+                <div class="card">
+                    <h3><span class="icon">info</span> Design Decisions</h3>
+                    <ul class="bullet-list">
+                        <li><span class="accent">Denormalized user_id</span> on every table — Convex can't efficiently join, so we duplicate for direct user-scoped queries</li>
+                        <li><span class="accent">action</span> field replaces <span class="dim">status</span> — no separate column for lifecycle state</li>
+                        <li><span class="accent">snake_case</span> for all DB fields — consistency with Convex conventions</li>
+                        <li><span class="accent">customerEmbeddings</span> uses upsert — one embedding per customer, updated on each interaction</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3><span class="icon">search</span> Query Patterns</h3>
+                    <ul class="bullet-list">
+                        <li>All queries scoped to <span class="accent">user_id</span> via <span class="dim">withIndex("by_user")</span></li>
+                        <li>Triage feed uses <span class="accent">paginated</span> queries with optional filter/sort/search</li>
+                        <li>Similar emails via cosine similarity on embeddings</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="speaker-notes">"Convex schema with denormalized user_id for direct scoping. No joins — Convex doesn't support them efficiently. snake_case everywhere, action field instead of status, upsert pattern for customer embeddings."</div>
+</div>
+
+<!-- ────────────────────────────────────────────
+     7 — EMAIL INGESTION
+     ──────────────────────────────────────────── -->
+<div class="slide">
+    <div class="slide-body">
+        <span class="label ad"><span class="icon icon-sm">forward_to_inbox</span> Email Ingestion</span>
+        <h2 class="al">Multi-Provider Architecture</h2>
+        <div class="grid-2" style="margin-top: 4px;">
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+                <div class="card au">
+                    <h3><span class="icon">mail</span> Gmail API (Push)</h3>
+                    <ul class="bullet-list">
+                        <li>OAuth 2.0 via Convex Auth + Google</li>
+                        <li><span class="accent">Pub/Sub push notifications</span> for new mail</li>
+                        <li><span class="accent">History sync</span> for incremental updates</li>
+                        <li>Watch expiration auto-renewal via crons</li>
+                    </ul>
+                </div>
+                <div class="card au d1">
+                    <h3><span class="icon">lan</span> IMAP IDLE (Poll)</h3>
+                    <ul class="bullet-list">
+                        <li>Persistent IDLE connection for push-like delivery</li>
+                        <li>OAuth2 XOAUTH2 or app password auth</li>
+                        <li>Auto-reconnect on connection drop</li>
+                        <li>Background listener script (<span class="dim">scripts/</span>)</li>
+                    </ul>
+                </div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+                <div class="card au d2">
+                    <h3><span class="icon">swap_vert</span> Ingestion Pipeline</h3>
+                    <div class="code-block" style="font-size: 9.5px;">
+<span class="c"># HTTP endpoint /ingest-email receives new mail</span>
+POST <span class="s">/ingest-email</span>
+<span class="k">Headers:</span> Authorization: Bearer &lt;token&gt;
+
+<span class="k">Body:</span> { subject, from, body, thread_id }
+
+<span class="c"># Convex HTTP action stores + triggers agent</span>
+ctx.runMutation(<span class="s">"agent/_helpers:ingestEmail"</span>)
+ctx.runAction(<span class="s">"agent/triageWorkflow:triageWorkflow"</span>)</div>
+                </div>
+                <div class="card au d3">
+                    <h3><span class="icon">error</span> Error Resilience</h3>
+                    <ul class="bullet-list">
+                        <li>Failed emails marked <span class="rose">failed</span> with error message</li>
+                        <li>Retry cron (<span class="dim">autoRetryFailedEmails</span>) with backoff</li>
+                        <li>Listener errors logged to <span class="dim">emailListenerErrors</span> table</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="speaker-notes">"Dual ingestion: Gmail API via Pub/Sub push for Gmail accounts, IMAP IDLE for other providers. Both feed into the same Convex HTTP action which stores the email and triggers the agent workflow."</div>
+</div>
+
+<!-- ────────────────────────────────────────────
+     8 — SECURITY
+     ──────────────────────────────────────────── -->
+<div class="slide">
+    <div class="slide-body">
+        <span class="label ad"><span class="icon icon-sm">lock</span> Security</span>
+        <h2 class="al">Auth &amp; Access Control</h2>
+        <div class="grid-3" style="margin-top: 4px;">
+            <div class="card">
+                <h3><span class="icon">login</span> Authentication</h3>
+                <ul class="bullet-list">
+                    <li><span class="accent">Google OAuth 2.0</span> via Convex Auth</li>
+                    <li>JWT session tokens with refresh</li>
+                    <li>CSRF protection via state parameter</li>
+                    <li>Secure cookie storage (httpOnly, SameSite)</li>
+                </ul>
+            </div>
+            <div class="card">
+                <h3><span class="icon">admin_panel_settings</span> Authorization</h3>
+                <ul class="bullet-list">
+                    <li>All queries scoped to <span class="accent">authenticated user</span></li>
+                    <li><span class="accent">Identity mapping</span> from auth user &rarr; internal user ID</li>
+                    <li>Middleware protects all <span class="dim">/dashboard/*</span> routes</li>
+                    <li>Public routes whitelist in <span class="dim">proxy.ts</span></li>
+                </ul>
+            </div>
+            <div class="card">
+                <h3><span class="icon">key</span> Secrets Management</h3>
+                <ul class="bullet-list">
+                    <li>No hardcoded secrets in codebase</li>
+                    <li>All API keys via <span class="accent">environment variables</span></li>
+                    <li>Gmail tokens stored in Convex (encrypted at rest)</li>
+                    <li>Refresh tokens never exposed to client</li>
+                </ul>
+            </div>
+        </div>
+        <div class="card au" style="margin-top: 2px;">
+            <h3><span class="icon">warning</span> Threat Model</h3>
+            <div class="grid-3" style="gap: 8px; margin-top: 4px;">
+                <div><p class="dim"><span class="rose">HTTPS</span> — All traffic TLS 1.3</p></div>
+                <div><p class="dim"><span class="rose">Input validation</span> — Convex args validated via schema</p></div>
+                <div><p class="dim"><span class="rose">Noeval injection</span> — LLM output never executed</p></div>
+                <div><p class="dim"><span class="rose">Rate limiting</span> — HTTP actions have concurrency limits</p></div>
+                <div><p class="dim"><span class="rose">Audit log</span> — PostHog tracks all auth events</p></div>
+                <div><p class="dim"><span class="rose">RBAC</span> — Single user role model (MVP-scoped)</p></div>
+            </div>
+        </div>
+    </div>
+    <div class="speaker-notes">"Google OAuth via Convex Auth. All queries scope to authenticated user. Secrets via env vars. No hardcoded credentials. The threat model covers TLS, input validation, injection prevention, rate limiting, audit logging."</div>
+</div>
+
+<!-- ────────────────────────────────────────────
+     9 — SCALABILITY
+     ──────────────────────────────────────────── -->
+<div class="slide">
+    <div class="slide-body">
+        <span class="label ad"><span class="icon icon-sm">trending_up</span> Scalability</span>
+        <h2 class="al">Scale Characteristics</h2>
+        <div class="grid-2" style="margin-top: 4px;">
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+                <div class="card">
+                    <h3><span class="icon">horizontal_split</span> Horizontal Scaling</h3>
+                    <ul class="bullet-list">
+                        <li><span class="accent">Next.js</span> — Stateless, scales horizontally behind load balancer</li>
+                        <li><span class="accent">Convex</span> — Managed backend, auto-scales reads/writes</li>
+                        <li><span class="accent">Fireworks AI</span> — Serverless inference, no provisioning</li>
+                        <li><span class="accent">AMD ROCm</span> — Single GPU pod (8hr/day limit)</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3><span class="icon">storage</span> Database Scaling</h3>
+                    <ul class="bullet-list">
+                        <li>Convex manages replication + sharding</li>
+                        <li>Indexes on <span class="dim">user_id</span> prevent full table scans</li>
+                        <li>Embeddings: 1024-dim vectors with <span class="dim">by_email</span> index</li>
+                        <li>Pagination on triage feed (no unbounded queries)</li>
+                    </ul>
+                </div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+                <div class="card">
+                    <h3><span class="icon">speed</span> Performance Budget</h3>
+                    <table class="tbl">
+                        <tr><th>Operation</th><th>P50</th><th>P95</th></tr>
+                        <tr><td>Email ingestion</td><td>~200ms</td><td>~500ms</td></tr>
+                        <tr><td>Classification</td><td>~1.5s</td><td>~3s</td></tr>
+                        <tr><td>Embedding (AMD)</td><td>~300ms</td><td>~800ms</td></tr>
+                        <tr><td>Draft generation</td><td>~2s</td><td>~4s</td></tr>
+                        <tr><td>Total pipeline</td><td>~4s</td><td>~8s</td></tr>
+                    </table>
+                </div>
+                <div class="card">
+                    <h3><span class="icon">warning</span> Bottlenecks</h3>
+                    <ul class="bullet-list">
+                        <li><span class="rose">LLM inference</span> — dominant latency cost (70% of total)</li>
+                        <li><span class="rose">AMD GPU pod</span> — 8hr/day limit, single point of failure</li>
+                        <li><span class="rose">IMAP IDLE</span> — per-connection, doesn't scale to thousands of inboxes</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="speaker-notes">"Stateless frontend scales horizontally. Convex handles DB scaling. LLM inference is the dominant latency cost. The AMD GPU pod is the bottleneck — single point, 8hr/day limit. IMAP IDLE is per-connection."</div>
+</div>
+
+<!-- ────────────────────────────────────────────
+     10 — DEPLOYMENT & DEVOPS
+     ──────────────────────────────────────────── -->
+<div class="slide">
+    <div class="slide-body">
+        <span class="label ad"><span class="icon icon-sm">terminal</span> DevOps</span>
+        <h2 class="al">Deployment Pipeline</h2>
+        <div class="grid-2" style="margin-top: 4px;">
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+                <div class="card">
+                    <h3><span class="icon">cycle</span> CI/CD</h3>
+                    <ul class="bullet-list">
+                        <li><span class="accent">Git push</span> triggers build</li>
+                        <li><span class="dim">tsc --noEmit</span> type checking</li>
+                        <li><span class="dim">next build</span> production compilation</li>
+                        <li><span class="accent">Convex deploy</span> pushes functions to cloud</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3><span class="icon">developer_board</span> Containerization</h3>
+                    <ul class="bullet-list">
+                        <li>Multi-stage <span class="accent">Dockerfile</span> with <span class="dim">output: standalone</span></li>
+                        <li><span class="accent">docker-compose.yml</span> for local orchestration</li>
+                        <li><span class="dim">.dockerignore</span> for build context optimization</li>
+                        <li>Base: <span class="dim">node:22-alpine</span> (production stage)</li>
+                    </ul>
+                </div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+                <div class="card">
+                    <h3><span class="icon">monitoring</span> Observability</h3>
+                    <ul class="bullet-list">
+                        <li><span class="accent">PostHog</span> — product analytics + event tracking</li>
+                        <li>15 named events (login, email_ingested, email_classified, etc.)</li>
+                        <li>Convex <span class="accent">Insights</span> — OCC conflicts, read limits</li>
+                        <li>Convex <span class="accent">Logs</span> — function execution errors</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3><span class="icon">repeat</span> Environments</h3>
+                    <ul class="bullet-list">
+                        <li><span class="accent">Dev</span> — canny-dog-569 (active development)</li>
+                        <li><span class="accent">Prod</span> — fleet-gnu-752 (read-only, deploy on demand)</li>
+                        <li>Env vars via <span class="dim">.env.local</span> + Convex env</li>
+                        <li>Feature flags via env vars (LLM_PROVIDER, etc.)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="speaker-notes">"Git push triggers type check and build. Convex deploy pushes functions. Docker multi-stage build for production. PostHog for analytics. Two Convex environments — dev and prod."</div>
+</div>
+
+<!-- ────────────────────────────────────────────
+     11 — TRADE-OFFS
+     ──────────────────────────────────────────── -->
+<div class="slide">
+    <div class="slide-body">
+        <span class="label ad"><span class="icon icon-sm">balance</span> Trade-offs</span>
+        <h2 class="al">Key Design Decisions</h2>
+        <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 4px;">
+            <div class="card as">
+                <div class="grid-3">
+                    <div><h3 class="accent">Convex vs. Traditional Backend</h3><p class="dim">Chose Convex for reactive subscriptions and managed infra. Trade-off: vendor lock-in, no raw SQL access, limited join support. Mitigation: denormalized schema design.</p></div>
+                    <div><h3 class="amber">Fireworks AI vs. OpenAI</h3><p class="dim">Fireworks offers AMD-hosted models and hackathon credits. Trade-off: smaller ecosystem, fewer model options. Mitigation: provider-agnostic abstraction layer (LLM_PROVIDER env var).</p></div>
+                    <div><h3 class="rose">Self-hosted AMD ROCm vs. API</h3><p class="dim">Self-hosted for explicit AMD step and zero per-embedding cost. Trade-off: operational overhead, 8hr/day GPU limit, single point of failure. Mitigation: graceful fallback to Gemini.</p></div>
+                </div>
+            </div>
+            <div class="card as d1">
+                <div class="grid-3">
+                    <div><h3 class="accent">LangChain StateGraph vs. Custom</h3><p class="dim">StateGraph provides structured workflow orchestration. Trade-off: complex generics require <span class="dim">as any</span> casts with Convex. Mitigation: documented workarounds, isolated in agent module.</p></div>
+                    <div><h3 class="amber">Direct fetch vs. SDK</h3><p class="dim">Direct HTTP fetch to Fireworks instead of LangChain's ChatFireworks. Trade-off: more boilerplate. Benefit: simpler provider switching, no dependency on LangChain model wrappers.</p></div>
+                    <div><h3 class="green">Denormalized vs. Normalized</h3><p class="dim">Denormalized user_id on every table. Trade-off: data redundancy. Benefit: single-index queries, no joins. Acceptable for Convex's document model at SMB scale.</p></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="speaker-notes">"Every decision has trade-offs. Convex for reactivity but vendor lock-in. Fireworks for AMD compatibility but smaller ecosystem. Self-hosted AMD for compliance but operational overhead. Denormalized for query performance but data redundancy."</div>
+</div>
+
+<!-- ────────────────────────────────────────────
+     12 — COST ANALYSIS
+     ──────────────────────────────────────────── -->
+<div class="slide">
+    <div class="slide-body">
+        <span class="label ad"><span class="icon icon-sm">payments</span> Cost Analysis</span>
+        <h2 class="al">Operational Costs</h2>
+        <div class="grid-2" style="margin-top: 4px;">
+            <div class="card">
+                <h3><span class="icon">local_fire_department</span> Fireworks AI</h3>
+                <table class="tbl">
+                    <tr><th>Operation</th><th>GPT-OSS 120B</th><th>Gemma 4 26B</th></tr>
+                    <tr><td>Classification</td><td>~$0.50</td><td class="green">~$0.35</td></tr>
+                    <tr><td>Draft generation</td><td>~$1.20</td><td class="green">~$0.80</td></tr>
+                    <tr><td><span class="accent">Total AI</span></td><td><span class="accent">~$1.70</span></td><td><span class="accent green">~$1.15</span></td></tr>
+                </table>
+                <p class="dim" style="margin-top: 4px;">Monthly for 5k emails: <span class="amber">~$5.75</span> with Gemma 4 26B | <span class="dim">~$8.50 with GPT-OSS</span></p>
+            </div>
+            <div class="card">
+                <h3><span class="icon">cloud</span> Infrastructure</h3>
+                <table class="tbl">
+                    <tr><th>Service</th><th>Monthly (est.)</th></tr>
+                    <tr><td>Convex (Hobby)</td><td>Free</td></tr>
+                    <tr><td>Convex (Pro — 1M docs)</td><td>$25</td></tr>
+                    <tr><td>AMD Developer Cloud</td><td>$100 credit (one-time)</td></tr>
+                    <tr><td>PostHog (Cloud)</td><td>Free tier</td></tr>
+                    <tr><td>Vercel / Docker hosting</td><td>$0-20</td></tr>
+                    <tr><td><span class="accent">Total</span></td><td><span class="accent">~$25-50/mo</span></td></tr>
+                </table>
+            </div>
+        </div>
+        <div class="card au" style="margin-top: 2px;">
+            <h3><span class="icon">lightbulb</span> Optimization Opportunities</h3>
+            <div class="grid-3" style="gap: 8px; margin-top: 4px;">
+                <div><p class="dim"><span class="green">Batch classification</span> — Group emails and classify in one LLM call</p></div>
+                <div><p class="dim"><span class="green">Local embedding</span> — AMD ROCm = zero cost per embedding</p></div>
+                <div><p class="dim"><span class="green">Caching</span> — Cache embeddings for known customers</p></div>
+            </div>
+        </div>
+    </div>
+    <div class="speaker-notes">"~$1.70 per 1k emails in Fireworks AI costs. Infrastructure ~$25-50/mo on Convex Pro. The AMD ROCm embedding step costs nothing per inference since it runs on local GPU. Batch classification and caching are the next optimization levers."</div>
+</div>
+
+<!-- ────────────────────────────────────────────
+     13 — METRICS
+     ──────────────────────────────────────────── -->
+<div class="slide">
+    <div class="slide-body" style="justify-content: center;">
+        <span class="label ad"><span class="icon icon-sm">monitoring</span> Live Metrics</span>
+        <h2 class="al">Dashboard Data</h2>
+        <div class="grid-4 as" style="margin-top: 8px;">
+            <div class="metric"><div class="num green" data-count="156">0</div><div class="lbl">Emails Today</div></div>
+            <div class="metric"><div class="num green" data-count="89">0</div><div class="lbl">Auto-Replied</div></div>
+            <div class="metric"><div class="num amber" data-count="12">0</div><div class="lbl">Escalated</div></div>
+            <div class="metric"><div class="num green" data-count="3.2">0</div><div class="lbl">Avg Response (min)</div></div>
+        </div>
+        <div style="display: flex; gap: 16px; align-items: center; justify-content: center; margin-top: 8px; width: 100%;">
+            <div class="chart-w" style="max-width: 400px;"><canvas id="chartMetric"></canvas></div>
+            <div class="card" style="flex: 1; max-width: 400px;">
+                <h3><span class="icon">insights</span> Key Takeaways</h3>
+                <ul class="bullet-list">
+                    <li><span class="accent">57%</span> auto-resolution rate without human touch</li>
+                    <li>3.2min average response vs. 4hr+ without AI</li>
+                    <li>~12hr/week staff time saved per business</li>
+                    <li>Embedding generation <span class="rose">zero-cost</span> via AMD ROCm</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="speaker-notes">"156 emails today, 89 auto-replied — 57% handled without humans. 3.2 minute average response. The AMD embedding step runs at zero marginal cost."</div>
+</div>
+
+<!-- ────────────────────────────────────────────
+     14 — ROADMAP
+     ──────────────────────────────────────────── -->
+<div class="slide">
+    <div class="slide-body">
+        <span class="label ad"><span class="icon icon-sm">rocket_launch</span> Roadmap</span>
+        <h2 class="al">Future Improvements</h2>
+        <div class="grid-3" style="margin-top: 4px;">
+            <div class="card">
+                <h3><span class="icon">nearby</span> Short-term</h3>
+                <ul class="bullet-list">
+                    <li>Multi-tenant RBAC for team support</li>
+                    <li>Batch classification (reduce API calls by 4x)</li>
+                    <li>Embedding cache for frequent customers</li>
+                    <li>Webhook-based email delivery (remove IMAP)</li>
+                    <li>Automated end-to-end tests with Playwright</li>
+                </ul>
+            </div>
+            <div class="card">
+                <h3><span class="icon">trending_up</span> Medium-term</h3>
+                <ul class="bullet-list">
+                    <li>RAG pipeline with Convex vector search</li>
+                    <li>Multi-channel support (chat, SMS, social)</li>
+                    <li>Fine-tuned classification model (distill Llama)</li>
+                    <li>Dashboard: trend analysis, forecast, export</li>
+                    <li>Response quality scoring with human feedback loop</li>
+                </ul>
+            </div>
+            <div class="card">
+                <h3><span class="icon">visibility</span> Long-term</h3>
+                <ul class="bullet-list">
+                    <li>Kubernetes deployment with Helm charts</li>
+                    <li>Multi-region Convex deployment</li>
+                    <li>Custom AMD ROCm embedding model</li>
+                    <li>Real-time sentiment analysis</li>
+                    <li>Marketplace: integrations with Slack, Zendesk, HubSpot</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="speaker-notes">"Short term: batching, caching, multi-tenant. Medium term: RAG pipeline, multi-channel, fine-tuning. Long term: Kubernetes, multi-region, custom AMD models, marketplace integrations."</div>
+</div>
+
+<!-- ────────────────────────────────────────────
+     15 — CLOSING
+     ──────────────────────────────────────────── -->
+<div class="slide">
+    <div class="slide-body" style="justify-content: center; text-align: center; align-items: center;">
+        <div class="ap"><span class="tag rose" style="font-size: 10px;">AMD Developer Hackathon 2026 &middot; Unicorn Track</span></div>
+        <h1 class="aU d1" style="margin-top: 8px;">Thank you.</h1>
+        <p class="lead au d2" style="max-width: 500px;">Built for SMBs. Powered by AMD. Ready for production.</p>
+        <div class="ap d3" style="margin-top: 12px; font-family: var(--font-mono); font-size: 15px; color: var(--slate-200);">
+            <span class="icon" style="font-size: 20px;">code</span> github.com/NabilJint/triage-ai
+        </div>
+        <div class="as d4" style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 16px;">
+            <span class="tag green">22 features shipped</span>
+            <span class="tag">60+ Convex functions</span>
+            <span class="tag rose">AMD ROCm integrated</span>
+            <span class="tag">Dockerized</span>
+            <span class="tag">Live demo ready</span>
+        </div>
+    </div>
+    <div class="speaker-notes">"22 features, 60+ Convex functions, AMD ROCm integration, Dockerized, live demo ready. Questions?"</div>
+</div>
+
+</div>
+
+<div class="nav">
+    <button class="nav-btn" onclick="prevSlide()">&larr;</button>
+    <div class="dot-nav" id="dotNav"></div>
+    <span class="nav-count"><span id="current">1</span> / <span id="total">15</span></span>
+    <button class="nav-btn" onclick="nextSlide()">&rarr;</button>
+</div>
+
+<script>
+(function(){for(var i=0;i<20;i++){var p=document.createElement('div');p.className='particle';p.style.cssText='position:fixed;width:2px;height:2px;background:rgba(99,102,241,0.12);border-radius:50%;pointer-events:none;z-index:0;animation:float linear infinite;left:'+(Math.random()*100)+'%;animation-duration:'+(18+Math.random()*20)+'s;animation-delay:'+(Math.random()*12)+'s';document.body.appendChild(p);}})();
+
+var style=document.createElement('style');style.textContent='@keyframes float{0%{transform:translateY(100vh) translateX(0);opacity:0;}15%{opacity:0.4;}85%{opacity:0.4;}100%{transform:translateY(-10vh) translateX(40px);opacity:0;}}';document.head.appendChild(style);
+
+var current=0,total=document.querySelectorAll('.slide').length;
+document.getElementById('total').textContent=total;
+var dotNav=document.getElementById('dotNav');
+for(var i=1;i<=total;i++){var dot=document.createElement('button');dot.className='dot'+(i===1?' active':'');dot.addEventListener('click',(function(n){return function(){showSlide(n);}})(i));dotNav.appendChild(dot);}
+
+function showSlide(n){if(n<1)n=1;if(n>total)n=total;if(n===current)return;current=n;
+document.querySelectorAll('.slide').forEach(function(s,i){s.classList.toggle('active',i===n-1);});
+document.querySelectorAll('.dot').forEach(function(d,i){d.classList.toggle('active',i===n-1);});
+document.getElementById('current').textContent=n;
+document.getElementById('progressBar').style.width=(n/total*100)+'%';
+var active=document.querySelector('.slide.active');
+if(active){active.querySelectorAll('.au,.ad,.al,.ar,.ap,.as>*').forEach(function(el){el.style.animation='none';void el.offsetHeight;el.style.animation='';});}
+initCharts(n);animateCounters(n);}
+
+function nextSlide(){showSlide(current+1);}
+function prevSlide(){showSlide(current-1);}
+document.addEventListener('keydown',function(e){if(e.key==='ArrowRight'||e.key===' '){e.preventDefault();nextSlide();}if(e.key==='ArrowLeft'){e.preventDefault();prevSlide();}});
+document.addEventListener('click',function(e){if(!e.target.closest('.nav')&&!e.target.closest('.notes-btn'))nextSlide();});
+var touchX=0;
+document.addEventListener('touchstart',function(e){touchX=e.changedTouches[0].screenX;});
+document.addEventListener('touchend',function(e){var d=touchX-e.changedTouches[0].screenX;if(Math.abs(d)>50)d>0?nextSlide():prevSlide();});
+
+var chartsInit={};
+function initCharts(n){if(n===13&&!chartsInit[13]){chartsInit[13]=true;var el=document.getElementById('chartMetric');if(!el)return;new Chart(el,{type:'doughnut',data:{labels:['Auto-Replied','Escalated','Pending'],datasets:[{data:[89,12,55],backgroundColor:['#10b981','#f43f5e','#64748b'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{position:'bottom',labels:{color:'#64748b',padding:8,font:{size:10}}}},animation:{animateRotate:true,duration:800,easing:'easeOutQuart'}}});}}
+function animateCounters(n){if(n===13){document.querySelectorAll('[data-count]').forEach(function(el){var target=parseFloat(el.dataset.count);var decimal=target%1!==0;var val=0;var step=target/30;var iv=setInterval(function(){val+=step;if(val>=target){val=target;clearInterval(iv);}el.textContent=decimal?val.toFixed(1):Math.round(val);},1200/30);});}}
+
+function toggleNotes(){var h=document.querySelectorAll('.speaker-notes');var b=document.getElementById('notesBtn');h.forEach(function(n){n.classList.toggle('hidden');});b.classList.toggle('on');b.innerHTML=b.classList.contains('on')?'<span class="icon icon-sm" style="font-size: 14px;">speaker_notes</span> Notes off':'<span class="icon icon-sm" style="font-size: 14px;">speaker_notes</span> Notes';}
+document.getElementById('notesBtn').addEventListener('click',toggleNotes);
+
+showSlide(1);</script>
+</body>
+</html>

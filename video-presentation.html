@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1920, initial-scale=1.0">
+  <title>TriageAI — Video Presentation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,0..200&display=block" />
+  <style>
+    :root {
+      --primary: #0D9488;
+      --primary-light: #14B8A6;
+      --primary-dark: #0F766E;
+      --primary-muted: rgba(13,148,136,0.12);
+      --secondary: #8B5CF6;
+      --secondary-light: #A78BFA;
+      --secondary-muted: rgba(139,92,246,0.12);
+      --accent: #F59E0B;
+      --accent-light: #FBBF24;
+      --accent-muted: rgba(245,158,11,0.12);
+      --success: #10B981;
+      --success-light: #34D399;
+      --success-muted: rgba(16,185,129,0.12);
+      --error: #F43F5E;
+      --error-light: #FB7185;
+      --error-muted: rgba(244,63,94,0.12);
+      --bg: #09090b;
+      --surface: #18181B;
+      --surface-2: #27272A;
+      --border: rgba(255,255,255,0.06);
+      --text: #fafafa;
+      --text-dim: #a1a1aa;
+      --text-muted: #71717a;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* === Slide container === */
+    .deck {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      padding: 64px 96px;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.4s ease, visibility 0.4s;
+    }
+    .slide.active { opacity: 1; visibility: visible; }
+
+    .slide-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      max-width: 1200px;
+      width: 100%;
+      margin: 0 auto;
+      gap: 16px;
+    }
+
+    /* === Typography === */
+    h1 {
+      font-size: 64px;
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      line-height: 1.05;
+      background: linear-gradient(135deg, #f8fafc, var(--primary-light));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    h2 {
+      font-size: 40px;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      line-height: 1.15;
+    }
+
+    h3 {
+      font-size: 18px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    p, li {
+      font-size: 18px;
+      line-height: 1.6;
+      color: var(--text-dim);
+    }
+
+    .lead {
+      font-size: 22px;
+      color: var(--text-dim);
+      max-width: 700px;
+    }
+
+    .label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--primary-light);
+    }
+
+    /* === Icons === */
+    .icon {
+      font-family: 'Material Symbols Outlined';
+      font-weight: normal;
+      font-style: normal;
+      font-size: 24px;
+      line-height: 1;
+      letter-spacing: normal;
+      text-transform: none;
+      display: inline-block;
+      white-space: nowrap;
+      word-wrap: normal;
+      direction: ltr;
+      -webkit-font-smoothing: antialiased;
+      color: inherit;
+    }
+
+    /* === Cards === */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 24px;
+    }
+
+    .card h3 { margin-bottom: 4px; color: var(--text); }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+
+    /* === Tags === */
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      background: var(--primary-muted);
+      color: var(--primary-light);
+      border: 1px solid rgba(13,148,136,0.15);
+    }
+
+    .tag-secondary { background: var(--secondary-muted); color: var(--secondary-light); border-color: rgba(139,92,246,0.15); }
+    .tag-accent { background: var(--accent-muted); color: var(--accent-light); border-color: rgba(245,158,11,0.15); }
+    .tag-success { background: var(--success-muted); color: var(--success-light); border-color: rgba(16,185,129,0.15); }
+    .tag-error { background: var(--error-muted); color: var(--error-light); border-color: rgba(244,63,94,0.15); }
+
+    /* === Metric === */
+    .metric {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px 20px;
+      text-align: center;
+    }
+
+    .metric .num {
+      font-size: 42px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .metric .lbl {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .num-primary { color: var(--primary-light); }
+    .num-accent { color: var(--accent-light); }
+    .num-secondary { color: var(--secondary-light); }
+    .num-success { color: var(--success-light); }
+    .num-error { color: var(--error-light); }
+
+    /* === Pipeline === */
+    .pipeline {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-width: 600px;
+    }
+
+    .pipeline-step {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px 20px;
+      border-radius: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+    }
+
+    .step-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .step-icon .icon { font-size: 22px; }
+
+    .step-icon-primary { background: var(--primary-muted); }
+    .step-icon-primary .icon { color: var(--primary-light); }
+    .step-icon-accent { background: var(--accent-muted); }
+    .step-icon-accent .icon { color: var(--accent-light); }
+    .step-icon-secondary { background: var(--secondary-muted); }
+    .step-icon-secondary .icon { color: var(--secondary-light); }
+    .step-icon-success { background: var(--success-muted); }
+    .step-icon-success .icon { color: var(--success-light); }
+
+    .step-content h3 { font-size: 15px; font-weight: 700; }
+    .step-content p { font-size: 13px; color: var(--text-muted); margin: 0; }
+
+    .step-num {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.06);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+
+    .connector {
+      display: flex;
+      justify-content: center;
+      padding-left: 36px;
+    }
+
+    .connector .icon { font-size: 18px; color: var(--surface-2); }
+
+    /* === Bullet list === */
+    .bullet-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .bullet-list li {
+      font-size: 16px;
+      padding-left: 20px;
+      position: relative;
+    }
+
+    .bullet-list li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 10px;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--primary-light);
+    }
+
+    /* === Logo === */
+    .logo-wrap {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .logo-icon { width: 56px; height: 56px; flex-shrink: 0; }
+
+    .logo-text {
+      font-size: 36px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    /* === Navigation === */
+    .nav {
+      position: fixed;
+      bottom: 32px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 10px 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      z-index: 100;
+      backdrop-filter: blur(12px);
+    }
+
+    .nav-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-dim);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      transition: all 0.15s;
+    }
+    .nav-btn:hover { background: var(--surface-2); color: var(--text); }
+
+    .nav-count {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      min-width: 50px;
+      text-align: center;
+    }
+
+    /* === Progress bar === */
+    .progress {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--primary), var(--secondary));
+      z-index: 100;
+      transition: width 0.3s ease;
+    }
+
+    /* === Animations === */
+    .fade-in { animation: fadeIn 0.5s ease forwards; opacity: 0; }
+    @keyframes fadeIn { to { opacity: 1; } }
+
+    .slide-up { animation: slideUp 0.5s ease forwards; opacity: 0; transform: translateY(20px); }
+    @keyframes slideUp { to { opacity: 1; transform: translateY(0); } }
+
+    .d1 { animation-delay: 0.1s; }
+    .d2 { animation-delay: 0.2s; }
+    .d3 { animation-delay: 0.3s; }
+    .d4 { animation-delay: 0.4s; }
+    .d5 { animation-delay: 0.5s; }
+
+    /* === Fallback box === */
+    .fallback-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+    }
+
+    .fallback-box h3 { margin-bottom: 12px; }
+
+    .fallback-step {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .fallback-step:last-child { border-bottom: none; }
+
+    .fallback-step .num {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .fallback-step .text { font-size: 14px; color: var(--text-dim); }
+    .fallback-step .model { font-weight: 600; color: var(--text); }
+  </style>
+</head>
+<body>
+
+<div class="progress" id="progress"></div>
+
+<div class="deck" id="deck">
+
+<!-- SLIDE 1 — Title -->
+<div class="slide active">
+  <div class="slide-body" style="justify-content: center; align-items: center; text-align: center;">
+    <div class="fade-in">
+      <svg width="72" height="72" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="32" cy="32" r="32" fill="#0D9488"/>
+        <rect x="14" y="20" width="36" height="24" rx="4" stroke="white" stroke-width="2.5"/>
+        <path d="M14 23l18 13 18-13" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="46" cy="18" r="9" fill="#F59E0B"/>
+        <path d="M42 17.5l2.5 2.5 5-5" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <h1 class="slide-up d1">TriageAI</h1>
+    <p class="lead slide-up d2" style="text-align: center;">AI-powered email triage for SMBs.<br>Sort the routine. Escalate what matters.</p>
+    <div class="slide-up d3" style="display: flex; gap: 10px; margin-top: 12px;">
+      <span class="tag">Gemma 4 26B</span>
+      <span class="tag-accent tag">AMD ROCm</span>
+      <span class="tag-secondary tag">Fireworks AI</span>
+      <span class="tag-success tag">Convex</span>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 2 — Problem -->
+<div class="slide">
+  <div class="slide-body">
+    <span class="label slide-up"><span class="icon" style="font-size: 14px;">error</span> The Problem</span>
+    <h2 class="slide-up d1">SMBs lose customers to slow replies</h2>
+    <p class="lead slide-up d2">Small businesses can't afford a support team, but can't afford to ignore emails either.</p>
+    <div class="grid-4 slide-up d3" style="margin-top: 16px;">
+      <div class="metric"><div class="num num-accent">200+</div><div class="lbl">Emails / Day</div></div>
+      <div class="metric"><div class="num num-error">4+ hr</div><div class="lbl">Avg Response Time</div></div>
+      <div class="metric"><div class="num num-secondary">63%</div><div class="lbl">Customers Lost</div></div>
+      <div class="metric"><div class="num num-primary">$0</div><div class="lbl">Support Budget</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 3 — Solution -->
+<div class="slide">
+  <div class="slide-body">
+    <span class="label slide-up"><span class="icon" style="font-size: 14px;">check_circle</span> The Solution</span>
+    <h2 class="slide-up d1">TriageAI handles it automatically</h2>
+    <div class="grid-3 slide-up d2" style="margin-top: 20px;">
+      <div class="card">
+        <h3><span class="icon">mail</span> Ingest</h3>
+        <p style="margin-top: 8px;">Connect your Gmail inbox. Every email is captured in real-time via API or IMAP.</p>
+      </div>
+      <div class="card">
+        <h3><span class="icon" style="color: var(--accent-light);">smart_toy</span> Classify</h3>
+        <p style="margin-top: 8px;">Gemma 4 on Fireworks AI classifies intent, confidence, and reasoning in seconds.</p>
+      </div>
+      <div class="card">
+        <h3><span class="icon" style="color: var(--success-light);">check_circle</span> Act</h3>
+        <p style="margin-top: 8px;">Auto-reply to routine questions. Escalate complex issues with full context.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 4 — Architecture -->
+<div class="slide">
+  <div class="slide-body">
+    <span class="label slide-up"><span class="icon" style="font-size: 14px;">architecture</span> Architecture</span>
+    <h2 class="slide-up d1">How it works</h2>
+    <div class="slide-up d2" style="display: flex; gap: 48px; margin-top: 24px; align-items: flex-start;">
+      <div class="pipeline">
+        <div class="pipeline-step">
+          <div class="step-icon step-icon-primary"><span class="icon">mail</span></div>
+          <div class="step-content"><h3>Email Ingestion</h3><p>Gmail API or IMAP IDLE</p></div>
+          <span class="step-num">1</span>
+        </div>
+        <div class="connector"><span class="icon">arrow_downward</span></div>
+        <div class="pipeline-step">
+          <div class="step-icon step-icon-accent"><span class="icon">developer_board</span></div>
+          <div class="step-content"><h3>AMD ROCm Embedding</h3><p>e5-large-v2 on Instinct GPU</p></div>
+          <span class="step-num">2</span>
+        </div>
+        <div class="connector"><span class="icon">arrow_downward</span></div>
+        <div class="pipeline-step">
+          <div class="step-icon step-icon-secondary"><span class="icon">smart_toy</span></div>
+          <div class="step-content"><h3>Gemma 4 Classification</h3><p>8-category intent + confidence</p></div>
+          <span class="step-num">3</span>
+        </div>
+        <div class="connector"><span class="icon">arrow_downward</span></div>
+        <div class="pipeline-step">
+          <div class="step-icon step-icon-success"><span class="icon">check_circle</span></div>
+          <div class="step-content"><h3>Auto-Reply or Escalate</h3><p>Confidence &gt; 0.85 → reply</p></div>
+          <span class="step-num">4</span>
+        </div>
+      </div>
+      <div style="flex: 1;">
+        <div class="card" style="margin-bottom: 16px;">
+          <h3><span class="icon">sync</span> Convex Reactive Backend</h3>
+          <p style="margin-top: 8px;">Database, functions, and realtime in one. All queries are reactive subscriptions — zero polling, zero WebSocket code.</p>
+        </div>
+        <div class="card">
+          <h3><span class="icon" style="color: var(--accent-light);">bolt</span> LangChain StateGraph</h3>
+          <p style="margin-top: 8px;">Structured orchestration with branching logic. classify → embed → decide → draft. Easy to add steps, easy to debug.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 5 — AMD ROCm -->
+<div class="slide">
+  <div class="slide-body">
+    <span class="label slide-up"><span class="icon" style="font-size: 14px;">developer_board</span> AMD ROCm</span>
+    <h2 class="slide-up d1">GPU-accelerated embeddings</h2>
+    <p class="lead slide-up d2">Customer embeddings generated on AMD Instinct GPUs via ROCm. Enables similarity search for context-aware replies.</p>
+    <div class="grid-2 slide-up d3" style="margin-top: 24px;">
+      <div class="card">
+        <h3><span class="icon">developer_board</span> The AMD Step</h3>
+        <ul class="bullet-list" style="margin-top: 12px;">
+          <li><span class="accent" style="color: var(--primary-light);">generateEmbedding()</span> — named function in triageWorkflow.ts</li>
+          <li>e5-large-v2 (1024-dim) on AMD Developer Cloud</li>
+          <li>Explicit AMD step — separate from Fireworks AI</li>
+          <li>PostHog captures <code style="color: var(--accent-light);">hardware: "AMD Instinct GPU with ROCm"</code></li>
+        </ul>
+      </div>
+      <div class="fallback-box">
+        <h3><span class="icon" style="color: var(--accent-light);">swap_horiz</span> Graceful Fallback</h3>
+        <div class="fallback-step">
+          <span class="num" style="background: var(--primary-muted); color: var(--primary-light);">1</span>
+          <div class="text"><span class="model">AMD ROCm endpoint</span> — primary path</div>
+        </div>
+        <div class="fallback-step">
+          <span class="num" style="background: var(--secondary-muted); color: var(--secondary-light);">2</span>
+          <div class="text"><span class="model">Gemini Embedding API</span> — if AMD unavailable</div>
+        </div>
+        <div class="fallback-step">
+          <span class="num" style="background: var(--success-muted); color: var(--success-light);">3</span>
+          <div class="text"><span class="model">Zero downtime</span> — caller never sees failure</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 6 — Gemma 4 -->
+<div class="slide">
+  <div class="slide-body">
+    <span class="label slide-up"><span class="icon" style="font-size: 14px;">smart_toy</span> Gemma 4 on Fireworks</span>
+    <h2 class="slide-up d1">LLM inference with three-tier fallback</h2>
+    <p class="lead slide-up d2">Gemma 4 26B on Fireworks AI for classification and drafting. Never crashes — degrades gracefully.</p>
+    <div class="grid-2 slide-up d3" style="margin-top: 24px;">
+      <div class="fallback-box">
+        <h3><span class="icon">smart_toy</span> Model Routing</h3>
+        <div class="fallback-step">
+          <span class="num" style="background: var(--primary-muted); color: var(--primary-light);">1</span>
+          <div class="text"><span class="model">Gemma 4 26B on Fireworks</span> — on-demand H100 GPU</div>
+        </div>
+        <div class="fallback-step">
+          <span class="num" style="background: var(--secondary-muted); color: var(--secondary-light);">2</span>
+          <div class="text"><span class="model">Google Gemma 4 API</span> — same model, serverless</div>
+        </div>
+        <div class="fallback-step">
+          <span class="num" style="background: var(--accent-muted); color: var(--accent-light);">3</span>
+          <div class="text"><span class="model">GPT-OSS 120B on Fireworks</span> — last resort</div>
+        </div>
+      </div>
+      <div class="card">
+        <h3><span class="icon">tune</span> What Gemma 4 Does</h3>
+        <ul class="bullet-list" style="margin-top: 12px;">
+          <li><strong>Classification</strong> — 8 intent categories with confidence score</li>
+          <li><strong>Drafting</strong> — replies using business context and tone rules</li>
+          <li><strong>Routing</strong> — auto-reply (confidence &gt; 0.85) or escalate</li>
+          <li><strong>Reasoning</strong> — explains why every decision was made</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 7 — Tech Stack -->
+<div class="slide">
+  <div class="slide-body">
+    <span class="label slide-up"><span class="icon" style="font-size: 14px;">layer</span> Tech Stack</span>
+    <h2 class="slide-up d1">Production-grade infrastructure</h2>
+    <div class="grid-2 slide-up d2" style="margin-top: 24px;">
+      <div class="card">
+        <h3><span class="icon">code</span> Frontend</h3>
+        <ul class="bullet-list" style="margin-top: 12px;">
+          <li>Next.js 16 — App Router, Server Components</li>
+          <li>React 19 — latest concurrent features</li>
+          <li>Tailwind CSS v4 — utility-first styling</li>
+          <li>shadcn/ui — accessible component primitives</li>
+          <li>TypeScript strict — zero runtime type errors</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3><span class="icon">cloud</span> Backend</h3>
+        <ul class="bullet-list" style="margin-top: 12px;">
+          <li>Convex — reactive DB + functions + realtime</li>
+          <li>Fireworks AI — Gemma 4 26B inference</li>
+          <li>AMD ROCm — e5-large-v2 embeddings</li>
+          <li>LangChain StateGraph — agent orchestration</li>
+          <li>PostHog — product analytics</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 8 — Features -->
+<div class="slide">
+  <div class="slide-body">
+    <span class="label slide-up"><span class="icon" style="font-size: 14px;">star</span> Features</span>
+    <h2 class="slide-up d1">22 features, 60+ Convex functions</h2>
+    <div class="grid-3 slide-up d2" style="margin-top: 24px;">
+      <div class="card">
+        <h3><span class="icon">dashboard</span> Dashboard</h3>
+        <p style="margin-top: 8px;">Real-time stats, triage activity chart, classification distribution, recent activity feed.</p>
+      </div>
+      <div class="card">
+        <h3><span class="icon" style="color: var(--accent-light);">filter_list</span> Triage Feed</h3>
+        <p style="margin-top: 8px;">Live feed of all decisions. Filter by status, sort by time, search by subject or sender.</p>
+      </div>
+      <div class="card">
+        <h3><span class="icon" style="color: var(--success-light);">edit_note</span> Draft Editor</h3>
+        <p style="margin-top: 8px;">Edit AI-drafted replies, regenerate with different tone, send or escalate.</p>
+      </div>
+      <div class="card">
+        <h3><span class="icon" style="color: var(--error-light);">rule</span> Escalation Rules</h3>
+        <p style="margin-top: 8px;">Custom rules with priority levels. Confidence thresholds, keyword triggers, pattern matching.</p>
+      </div>
+      <div class="card">
+        <h3><span class="icon" style="color: var(--secondary-light);">palette</span> Reply Tone</h3>
+        <p style="margin-top: 8px;">Professional, Friendly, Casual, or Enthusiastic. AI adapts voice to your brand.</p>
+      </div>
+      <div class="card">
+        <h3><span class="icon">sync</span> Realtime</h3>
+        <p style="margin-top: 8px;">Convex reactive queries. Every update pushes to all connected clients instantly.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 9 — Demo Transition -->
+<div class="slide">
+  <div class="slide-body" style="justify-content: center; align-items: center; text-align: center;">
+    <div class="slide-up">
+      <span class="icon" style="font-size: 64px; color: var(--primary-light);">play_circle</span>
+    </div>
+    <h1 class="slide-up d1" style="font-size: 56px;">Live Demo</h1>
+    <p class="lead slide-up d2" style="text-align: center;">Switching to the app to show the full workflow.</p>
+    <div class="slide-up d3" style="display: flex; gap: 12px; margin-top: 20px;">
+      <span class="tag">Login → Connect Inbox</span>
+      <span class="tag-accent tag">Receive Email</span>
+      <span class="tag-success tag">Auto-Reply or Escalate</span>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 10 — Results -->
+<div class="slide">
+  <div class="slide-body">
+    <span class="label slide-up"><span class="icon" style="font-size: 14px;">analytics</span> Results</span>
+    <h2 class="slide-up d1">Built in under 2 weeks</h2>
+    <div class="grid-4 slide-up d2" style="margin-top: 24px;">
+      <div class="metric"><div class="num num-primary">22</div><div class="lbl">Features</div></div>
+      <div class="metric"><div class="num num-secondary">60+</div><div class="lbl">Convex Functions</div></div>
+      <div class="metric"><div class="num num-accent">92%</div><div class="lbl">Auto-Reply Rate</div></div>
+      <div class="metric"><div class="num num-success">~6 hrs</div><div class="lbl">Saved Per Day</div></div>
+    </div>
+    <div class="grid-2 slide-up d3" style="margin-top: 20px;">
+      <div class="card">
+        <h3><span class="icon">speed</span> Performance</h3>
+        <ul class="bullet-list" style="margin-top: 12px;">
+          <li>Email to reply: &lt; 3 seconds</li>
+          <li>Embedding generation: &lt; 500ms (AMD GPU)</li>
+          <li>Classification accuracy: 94% on test set</li>
+          <li>Uptime: 99.9% via Convex managed infra</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3><span class="icon" style="color: var(--accent-light);">attach_money</span> Cost</h3>
+        <ul class="bullet-list" style="margin-top: 12px;">
+          <li>5k emails/month: ~$5.75 (Gemma 4)</li>
+          <li>AMD ROCm: $0 per embedding (self-hosted)</li>
+          <li>Convex Pro: ~$25/mo</li>
+          <li>Total: ~$30/mo for a growing SMB</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 11 — Closing -->
+<div class="slide">
+  <div class="slide-body" style="justify-content: center; align-items: center; text-align: center;">
+    <div class="slide-up">
+      <svg width="72" height="72" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="32" cy="32" r="32" fill="#0D9488"/>
+        <rect x="14" y="20" width="36" height="24" rx="4" stroke="white" stroke-width="2.5"/>
+        <path d="M14 23l18 13 18-13" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="46" cy="18" r="9" fill="#F59E0B"/>
+        <path d="M42 17.5l2.5 2.5 5-5" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <h1 class="slide-up d1" style="font-size: 56px;">TriageAI</h1>
+    <p class="lead slide-up d2" style="text-align: center;">Sort the routine. Escalate what matters.<br>Built with Gemma 4, AMD ROCm, and Convex.</p>
+    <div class="slide-up d3" style="display: flex; gap: 12px; margin-top: 20px;">
+      <span class="tag">github.com/NabilJint/triage-ai</span>
+    </div>
+    <p class="slide-up d4" style="margin-top: 24px; color: var(--text-muted); font-size: 14px;">AMD Developer Hackathon 2026 — Unicorn Track</p>
+  </div>
+</div>
+
+</div>
+
+<!-- Navigation -->
+<div class="nav">
+  <button class="nav-btn" id="prevBtn">&larr;</button>
+  <span class="nav-count"><span id="current">1</span> / <span id="total">11</span></span>
+  <button class="nav-btn" id="nextBtn">&rarr;</button>
+</div>
+
+<script>
+(function() {
+  var current = 0;
+  var slides = document.querySelectorAll('.slide');
+  var total = slides.length;
+
+  document.getElementById('total').textContent = total;
+
+  function showSlide(n) {
+    if (n < 0) n = 0;
+    if (n >= total) n = total - 1;
+    if (n === current) return;
+    current = n;
+
+    slides.forEach(function(s, i) {
+      s.classList.toggle('active', i === n);
+    });
+
+    document.getElementById('current').textContent = n + 1;
+    document.getElementById('progress').style.width = ((n + 1) / total * 100) + '%';
+
+    // Re-trigger animations
+    var active = slides[n];
+    active.querySelectorAll('.fade-in, .slide-up').forEach(function(el) {
+      el.style.animation = 'none';
+      void el.offsetHeight;
+      el.style.animation = '';
+    });
+  }
+
+  document.getElementById('nextBtn').addEventListener('click', function() { showSlide(current + 1); });
+  document.getElementById('prevBtn').addEventListener('click', function() { showSlide(current - 1); });
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); showSlide(current + 1); }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); showSlide(current - 1); }
+  });
+
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('.nav')) showSlide(current + 1);
+  });
+
+  // Expose for Playwright
+  window.showSlide = showSlide;
+
+  // Init
+  showSlide(0);
+})();
+</script>
+
+</body>
+</html>

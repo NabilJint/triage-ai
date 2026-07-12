@@ -1,4 +1,4 @@
-const GEMA_MODEL = process.env.FIREWORKS_MODEL ?? "accounts/fireworks/models/llama-v3p3-70b-instruct";
+const FIREWORKS_MODEL = process.env.FIREWORKS_MODEL ?? "accounts/fireworks/models/gpt-oss-120b";
 
 const SYSTEM_PROMPT =
   "You are a business analyst. Summarize the following website content into a clear, structured business context description. Do not use markdown or any formatting symbols. Use plain text only with line breaks between sections. Use the following structure:\n\n" +
@@ -31,7 +31,7 @@ async function callFireworks(content: string, systemPrompt: string = SYSTEM_PROM
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: GEMA_MODEL,
+        model: FIREWORKS_MODEL,
         temperature: 0.2,
         max_tokens: 2048,
         messages: [
@@ -52,8 +52,71 @@ async function callFireworks(content: string, systemPrompt: string = SYSTEM_PROM
 }
 
 async function callGemma(content: string, systemPrompt: string = SYSTEM_PROMPT): Promise<string> {
-  const apiKey = process.env.FIREWORKS_API_KEY;
-  if (!apiKey) throw new Error("Gemma 4 not configured: FIREWORKS_API_KEY is missing");
+  const fwKey = process.env.FIREWORKS_API_KEY;
+
+  // 1) Try Fireworks with FIREWORKS_MODEL first
+  if (fwKey) {
+    try {
+      const res = await fetch(
+        "https://api.fireworks.ai/inference/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${fwKey}`,
+          },
+          body: JSON.stringify({
+            model: FIREWORKS_MODEL,
+            temperature: 0.2,
+            max_tokens: 2048,
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: content.slice(0, 15000) },
+            ],
+          }),
+        },
+      );
+
+      if (res.ok) {
+        const data = await res.json();
+        const text = data.choices?.[0]?.message?.content ?? "";
+        if (text) return text;
+      }
+    } catch {
+      // Fireworks failed — try Google
+    }
+  }
+
+  // 2) Fallback: Google Gemma 4
+  const googleKey = process.env.GOOGLE_API_KEY;
+  if (googleKey) {
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemma-4-26b-a4b-it:generateContent?key=${googleKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: `${systemPrompt}\n\n${content.slice(0, 15000)}` }] }],
+            generationConfig: { temperature: 0.2, maxOutputTokens: 2048 },
+          }),
+        },
+      );
+
+      if (res.ok) {
+        const data = await res.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+        if (text) return text;
+      }
+    } catch {
+      // Google Gemma 4 failed — fall through to Fireworks default
+    }
+  }
+
+  // 3) Last resort: Fireworks gpt-oss-120b (always available on hackathon key)
+  if (!fwKey) {
+    throw new Error("No LLM available: set FIREWORKS_API_KEY or GOOGLE_API_KEY");
+  }
 
   const res = await fetch(
     "https://api.fireworks.ai/inference/v1/chat/completions",
@@ -61,10 +124,10 @@ async function callGemma(content: string, systemPrompt: string = SYSTEM_PROMPT):
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${fwKey}`,
       },
       body: JSON.stringify({
-        model: GEMA_MODEL,
+        model: "accounts/fireworks/models/gpt-oss-120b",
         temperature: 0.2,
         max_tokens: 2048,
         messages: [
@@ -77,7 +140,7 @@ async function callGemma(content: string, systemPrompt: string = SYSTEM_PROMPT):
 
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(`Gemma 4 API error ${res.status}: ${body}`);
+    throw new Error(`Gemma 4 fallback API error ${res.status}: ${body}`);
   }
 
   const data = await res.json();
