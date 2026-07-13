@@ -11,7 +11,7 @@
     "listen:inbox": "tsx scripts/inbox-listener.ts",
     "convex:dev": "convex dev",
     "convex:deploy": "convex deploy",
-    "postinstall": "convex codegen"
+    "postinstall": "if [ -z \"$VERCEL\" ]; then convex codegen; fi"
   },
   "dependencies": {
     "@auth/core": "^0.41.2",
